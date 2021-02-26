@@ -1,3 +1,23 @@
-from django.shortcuts import render
+from django.contrib.auth.forms import UserCreationForm as DjangoUserCreationForm
+from django.shortcuts import render, redirect
 
-# Create your views here.
+from django.contrib.auth.models import Group
+
+from .models import User
+
+
+class UserCreationForm(DjangoUserCreationForm):
+    class Meta(DjangoUserCreationForm.Meta):
+        model = User
+
+
+def register(request):
+    form = UserCreationForm(request.POST or None)
+    if form.is_valid():
+        user = form.save(commit=False)
+        user.is_staff = True
+        user.groups.add(Group.objects.get(name='teacher'))
+        user.save()
+        return redirect('admin:index')
+
+    return render(request, 'register.html', {'form': form})

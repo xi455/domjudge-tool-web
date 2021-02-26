@@ -151,7 +151,7 @@ JAZZMIN_SETTINGS = {
     # "site_logo": "problems/img/logo.png",
 
     # Welcome text on the login screen
-    "welcome_sign": "Welcome to the Judge Tool",
+    "welcome_sign": "歡迎使用 Judge Tool",
 
     # Copyright on the footer
     "copyright": "NTUB",

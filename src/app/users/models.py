@@ -17,7 +17,7 @@ class User(BaseModel, AbstractUser):
         return self.username
 
     def __str__(self):
-        return f'{self.chinese_full_name}（{self.email}）'
+        return f'{self.chinese_full_name}:{self.email}'
 
     def save(self, *args, **kwargs):
         self.email = str(self.email).lower()
