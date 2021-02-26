@@ -16,6 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+admin.site.enable_nav_sidebar = False
+admin.site.site_header = "Judge Tool"
+admin.site.site_title = "Judge Tool"
+admin.site.index_title = "Judge Tool"
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('problem/', include('app.problems.urls', namespace='problem')),

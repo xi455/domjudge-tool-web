@@ -10,6 +10,7 @@ werkzeug = "*"
 django = "*"
 django-extensions = "*"
 pyyaml = "*"
+django-jazzmin = "*"
 
 [requires]
 python_version = "3.8"
