@@ -2,52 +2,65 @@ import yaml
 import shutil
 import os
 
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from django.conf import settings
+from pathlib import Path
+from io import StringIO
+
+from django.core.files.storage import FileSystemStorage
 
 from ..models import Problem
 
+file_storage = FileSystemStorage(location='/tmp/problems')
+
+
+def remove_folder(instance: Problem):
+    _id = str(instance.id).replace('-', '')
+    if Path(f'/tmp/problems/problem_{_id}').exists():
+        shutil.rmtree(f'/tmp/problems/problem_{_id}')
+
+
+def copy_pdf(instance: Problem):
+    _id = str(instance.id).replace('-', '')
+    file_storage.save(f'problem_{_id}/problem.pdf', instance.description_file.file)
+
 
 def create_problem_yaml(instance: Problem):
-    problem_yaml = ContentFile(
-        yaml.dump({'name': instance.name}).encode(),
-    )
     _id = str(instance.id).replace('-', '')
-    default_storage.save(f'problem_{_id}/problem.yaml', problem_yaml)
+    temp = StringIO(yaml.dump({'name': instance.name}, allow_unicode=True))
+    file_storage.save(f'problem_{_id}/problem.yaml', temp)
+    temp.seek(0)
 
 
 def create_problem_time_limit(instance: Problem):
-    content = ContentFile(
+    content = StringIO(
         f"timelimit='{int(instance.time_limit)}'"
     )
     _id = str(instance.id).replace('-', '')
-    default_storage.save(f'problem_{_id}/domjudge-problem.ini', content)
+    file_storage.save(f'problem_{_id}/domjudge-problem.ini', content)
 
 
 def create_in_out_text(instance: Problem):
     _id = str(instance.id).replace('-', '')
     for index, item in enumerate(instance.int_out_data.all()):
         num = index + 1
-        default_storage.save(
+        file_storage.save(
             f'problem_{_id}/data/secret/{num}.in',
-            ContentFile(item.input_content.encode())
+            StringIO(item.input_content)
         )
-        default_storage.save(
+        file_storage.save(
             f'problem_{_id}/data/secret/{num}.ans',
-            ContentFile(item.answer_content.encode())
+            StringIO(item.answer_content)
         )
 
 
 def create_problem_zip(instance: Problem):
     _id = str(instance.id).replace('-', '')
     zip_file_name = f'{instance.short_name}'
-    path_root = settings.MEDIA_ROOT
+    path_root = '/tmp/problems'
+    folder_name = f'problem_{_id}'
     out = shutil.make_archive(
-        zip_file_name,
+        os.path.join(path_root, zip_file_name),
         'zip',
-        os.path.join(path_root, f'problem_{_id}'),
+        root_dir=os.path.join(path_root, folder_name),
     )
     path = os.path.join(path_root, out)
-    print(os.path.join(path_root, f'problem_{_id}'))
     return path
