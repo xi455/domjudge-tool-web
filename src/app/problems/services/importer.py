@@ -3,7 +3,7 @@ import shutil
 import os
 
 from pathlib import Path
-from io import StringIO
+from io import StringIO, BytesIO
 
 from django.core.files.storage import FileSystemStorage
 
@@ -38,17 +38,27 @@ def create_problem_time_limit(instance: Problem):
     file_storage.save(f'problem_{_id}/domjudge-problem.ini', content)
 
 
+WINDOWS_LINE_ENDING = b'\r\n'
+UNIX_LINE_ENDING = b'\n'
+
+
 def create_in_out_text(instance: Problem):
     _id = str(instance.id).replace('-', '')
     for index, item in enumerate(instance.int_out_data.all()):
         num = index + 1
+        input_content_b = item.input_content.\
+            encode().\
+            replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
             f'problem_{_id}/data/secret/{num}.in',
-            StringIO(item.input_content)
+            BytesIO(input_content_b)
         )
+        answer_content_b = item.answer_content.\
+            encode().\
+            replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
             f'problem_{_id}/data/secret/{num}.ans',
-            StringIO(item.answer_content)
+            BytesIO(answer_content_b)
         )
 
 
