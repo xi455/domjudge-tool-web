@@ -17,6 +17,12 @@ Domjudge 線上程式評分系統輔助工具 網頁版
 - Git for Windows(Git Bash)
 - Python 3.8
     - [pipenv](https://pipenv.pypa.io/en/latest/)
+    
+```bash
+$ py -m pip install -U pipenv
+or 
+$ python -m pip install -U pipenv
+```
 
 #### MacOS/Linux
 
@@ -36,11 +42,18 @@ $ git clone https://github.com/ntub/domjudge-tool-web.git
 $ cd domjudge-tool-web
 $ pipenv install --dev
 # Create new python venv and install python packages
+$ py -m pipenv install --dev
+# for Windows
+$ python -m pipenv install --dev
+
 ```
 
 ```bash
 $ pipenv shell
 # active virtualenv
+$ py -m pipenv shell
+# for Windows
+$ python -m pipenv shell
 
 (venv)$ cd src
 
@@ -60,6 +73,8 @@ $ pipenv shell
 
 (venv)$ python manage.py runserver
 # Control + C can exit
+(venv)$ winpty python manage.py runserver
+# for Windows git bash
 ```
 
 #### Web GUI
