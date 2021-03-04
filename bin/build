@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+WORKDIR=$( dirname "${SCRIPT_DIR}" )
+
+source ${WORKDIR}/deploy/.env
+
+cd $WORKDIR
+
+docker build -t "${APP_IMAGE_NAME}:${APP_IMAGE_TAG}" .
