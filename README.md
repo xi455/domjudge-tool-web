@@ -70,7 +70,11 @@ $ python -m pipenv shell
 # Password (again): ***************
 # Bypass password validation and create user anyway? [y/N]: y
 # Superuser created successfully.
+```
 
+Run Server
+
+```bash
 (venv)$ python manage.py runserver
 # Control + C can exit
 (venv)$ winpty python manage.py runserver
