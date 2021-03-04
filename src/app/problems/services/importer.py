@@ -25,7 +25,7 @@ def copy_pdf(instance: Problem):
 
 def create_problem_yaml(instance: Problem):
     _id = str(instance.id).replace('-', '')
-    temp = StringIO(yaml.dump({'name': instance.name}, allow_unicode=True))
+    temp = BytesIO(yaml.dump({'name': instance.name}, allow_unicode=True).encode('utf-8'))
     file_storage.save(f'problem_{_id}/problem.yaml', temp)
     temp.seek(0)
 
@@ -47,14 +47,14 @@ def create_in_out_text(instance: Problem):
     for index, item in enumerate(instance.int_out_data.all()):
         num = index + 1
         input_content_b = item.input_content.\
-            encode().\
+            encode('utf-8').\
             replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
             f'problem_{_id}/data/secret/{num}.in',
             BytesIO(input_content_b)
         )
         answer_content_b = item.answer_content.\
-            encode().\
+            encode('utf-8').\
             replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
             f'problem_{_id}/data/secret/{num}.ans',

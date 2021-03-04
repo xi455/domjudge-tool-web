@@ -38,12 +38,12 @@ class Problem(BaseModel):
 
 
 def normalization_text(txt: str):
-    new_txt = ''
-    for line in txt.splitlines():
+    contexts = []
+    for index, line in enumerate(txt.splitlines()):
         s = line.strip()
         if s:
-            new_txt += f'{s}\n'
-    return new_txt
+            contexts.append(s)
+    return '\n'.join(contexts)
 
 
 class ProblemInOut(models.Model):
