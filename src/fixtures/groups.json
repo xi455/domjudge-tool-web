@@ -1,9 +1,21 @@
 [
   {
     "model": "auth.group",
+    "pk": 1,
     "fields": {
       "name": "teacher",
-      "permissions": [25, 26, 27, 28, 29, 30, 31, 32, 22, 24]
+      "permissions": [
+        ["add_problem", "problems", "problem"],
+        ["change_problem", "problems", "problem"],
+        ["delete_problem", "problems", "problem"],
+        ["view_problem", "problems", "problem"],
+        ["add_probleminout", "problems", "probleminout"],
+        ["change_probleminout", "problems", "probleminout"],
+        ["delete_probleminout", "problems", "probleminout"],
+        ["view_probleminout", "problems", "probleminout"],
+        ["change_user", "users", "user"],
+        ["view_user", "users", "user"]
+      ]
     }
   }
 ]
