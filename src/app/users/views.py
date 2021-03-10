@@ -14,7 +14,7 @@ class UserCreationForm(forms.UserCreationForm):
 def register(request):
     form = UserCreationForm(request.POST or None)
     if form.is_valid():
-        user = form.save(commit=False)
+        user = form.save()  # Group add should save user first.
         user.is_staff = True
         user.groups.add(Group.objects.get(name='teacher'))
         user.save()
