@@ -19,6 +19,7 @@ django-jazzmin = "*"
 django-environ = "*"
 django-split-settings = "*"
 psycopg2-binary = "*"
+sentry-sdk = "*"
 
 [requires]
 python_version = "3.8"
