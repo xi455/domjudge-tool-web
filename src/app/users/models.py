@@ -10,7 +10,7 @@ class User(BaseModel, AbstractUser):
 
     @property
     def chinese_full_name(self):
-        value = f"{self.last_name}{self.first_name}".strip()
+        value = f'{self.last_name}{self.first_name}'.strip()
         return value if value else '無法顯示姓名'
 
     def natural_key(self):

@@ -17,13 +17,17 @@ class Problem(BaseModel):
         '題目說明檔',
         upload_to=problem_file_path,
         help_text='上傳題目說明 PDF',
-        validators=[FileExtensionValidator(allowed_extensions=['pdf'])]
+        validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
     )
     time_limit = models.FloatField('限制執行時間', default=1.0)
-    owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='problems', verbose_name='擁有者')
+    owner = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='problems',
+        verbose_name='擁有者',
+    )
 
     def delete(self, using=None, keep_parents=False):
-        _id = str(self.id).replace('-', '')
         pdf_path = self.description_file.path
         model = super().delete(using, keep_parents)
         default_storage.delete(pdf_path)
@@ -47,11 +51,21 @@ def normalization_text(txt: str):
 
 
 class ProblemInOut(models.Model):
-    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='int_out_data')
+    problem = models.ForeignKey(
+        Problem,
+        on_delete=models.CASCADE,
+        related_name='int_out_data',
+    )
     input_content = models.TextField('輸入測資', help_text='每行前後空白會被去除')
     answer_content = models.TextField('輸出答案', help_text='每行前後空白會被去除')
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+    def save(
+        self,
+        force_insert=False,
+        force_update=False,
+        using=None,
+        update_fields=None,
+    ):
         self.input_content = normalization_text(self.input_content)
         self.answer_content = normalization_text(self.answer_content)
         super().save(force_insert, force_update, using, update_fields)

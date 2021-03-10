@@ -20,20 +20,22 @@ def remove_folder(instance: Problem):
 
 def copy_pdf(instance: Problem):
     _id = str(instance.id).replace('-', '')
-    file_storage.save(f'problem_{_id}/problem.pdf', instance.description_file.file)
+    file_storage.save(
+        f'problem_{_id}/problem.pdf',
+        instance.description_file.file,
+    )
 
 
 def create_problem_yaml(instance: Problem):
     _id = str(instance.id).replace('-', '')
-    temp = BytesIO(yaml.dump({'name': instance.name}, allow_unicode=True).encode('utf-8'))
+    data = {'name': instance.name}
+    temp = BytesIO(yaml.dump(data, allow_unicode=True).encode('utf-8'))
     file_storage.save(f'problem_{_id}/problem.yaml', temp)
     temp.seek(0)
 
 
 def create_problem_time_limit(instance: Problem):
-    content = StringIO(
-        f"timelimit='{int(instance.time_limit)}'"
-    )
+    content = StringIO(f"timelimit='{int(instance.time_limit)}'")
     _id = str(instance.id).replace('-', '')
     file_storage.save(f'problem_{_id}/domjudge-problem.ini', content)
 
@@ -51,14 +53,14 @@ def create_in_out_text(instance: Problem):
             replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
             f'problem_{_id}/data/secret/{num}.in',
-            BytesIO(input_content_b)
+            BytesIO(input_content_b),
         )
         answer_content_b = item.answer_content.\
             encode('utf-8').\
             replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
             f'problem_{_id}/data/secret/{num}.ans',
-            BytesIO(answer_content_b)
+            BytesIO(answer_content_b),
         )
 
 

@@ -1,4 +1,4 @@
-from django.contrib.auth.forms import UserCreationForm as DjangoUserCreationForm
+from django.contrib.auth import forms
 from django.shortcuts import render, redirect
 
 from django.contrib.auth.models import Group
@@ -6,8 +6,8 @@ from django.contrib.auth.models import Group
 from .models import User
 
 
-class UserCreationForm(DjangoUserCreationForm):
-    class Meta(DjangoUserCreationForm.Meta):
+class UserCreationForm(forms.UserCreationForm):
+    class Meta(forms.UserCreationForm.Meta):
         model = User
 
 

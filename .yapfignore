@@ -1,10 +1,15 @@
-.DS_Store
+*/migrations/
 
-.vscode/
-.idea/
+# ===== From gitignore =====
 
+# Django static files
 assets/
 media/
+
+# MacOS
+.DS_Store
+
+# ===== Download from: https://github.com/github/gitignore =====
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

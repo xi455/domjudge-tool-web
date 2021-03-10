@@ -5,12 +5,20 @@ verify_ssl = true
 
 [dev-packages]
 werkzeug = "*"
+flake8 = "*"
+flake8-commas = "*"
+mypy = "*"
+yapf = "*"
+ipython = "*"
 
 [packages]
 django = "*"
 django-extensions = "*"
 pyyaml = "*"
 django-jazzmin = "*"
+django-environ = "*"
+django-split-settings = "*"
+psycopg2-binary = "*"
 
 [requires]
 python_version = "3.8"

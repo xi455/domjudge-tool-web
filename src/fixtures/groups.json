@@ -1,1 +1,9 @@
-[{"model": "auth.group", "fields": {"name": "teacher", "permissions": [25, 26, 27, 28, 29, 30, 31, 32, 22, 24]}}]
+[
+  {
+    "model": "auth.group",
+    "fields": {
+      "name": "teacher",
+      "permissions": [25, 26, 27, 28, 29, 30, 31, 32, 22, 24]
+    }
+  }
+]
