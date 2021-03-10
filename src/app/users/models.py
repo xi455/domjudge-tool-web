@@ -5,8 +5,10 @@ from utils.models import BaseModel
 
 
 class User(BaseModel, AbstractUser):
-    first_name = models.CharField('名子', max_length=30, blank=True)
+    first_name = models.CharField('名字', max_length=30, blank=True)
     last_name = models.CharField('姓氏', max_length=150, blank=True)
+
+    REQUIRED_FIELDS: list = []
 
     @property
     def chinese_full_name(self):
