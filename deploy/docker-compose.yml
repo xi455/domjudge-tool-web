@@ -17,9 +17,9 @@ services:
     image: ${APP_IMAGE_NAME}:${APP_IMAGE_TAG}
     restart: ${DOCKER_RESTART}
     volumes:
-      - app_log:/src/log
-      - app_media:/src/media
-      - app_static:/src/assets
+      - app_log:/app/log
+      - app_media:/app/media
+      - app_static:/app/assets
     env_file:
       - ${APP_ENV_FILE}
     sysctls:
