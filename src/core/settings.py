@@ -145,6 +145,10 @@ MEDIA_URL = '/media/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 
+FIXTURE_DIRS = [
+    BASE_DIR / 'fixtures',
+]
+
 # Include components and environments settings
 
 include(
