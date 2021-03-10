@@ -1,0 +1,17 @@
+{$SITE_ADDRESS} {
+  route /static/* {
+    uri strip_prefix /static
+    file_server {
+      root /srv/assets
+    }
+  }
+
+  route /media/* {
+    uri strip_prefix /media
+    file_server {
+      root /srv/media
+    }
+  }
+
+  reverse_proxy app:8000
+}
