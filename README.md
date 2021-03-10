@@ -1,4 +1,4 @@
-# Domjudge tool web
+# Domjudge Tool
 
 Domjudge 線上程式評分系統輔助工具 網頁版
 
