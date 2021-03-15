@@ -39,6 +39,7 @@ class Problem(BaseModel):
     class Meta:
         verbose_name = '題目'
         verbose_name_plural = '題目'
+        ordering = ['short_name', '-update_at', '-create_at']
 
 
 def normalization_text(txt: str):

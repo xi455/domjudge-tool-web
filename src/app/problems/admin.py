@@ -14,6 +14,7 @@ class ProblemInOutInline(admin.TabularInline):
 @admin.register(Problem)
 class ProblemAdmin(admin.ModelAdmin):
     list_display = (
+        'short_name',
         'name',
         'time_limit',
         'owner',
@@ -21,7 +22,7 @@ class ProblemAdmin(admin.ModelAdmin):
         'make_zip',
     )
     list_filter = ('create_at', 'update_at')
-    search_fields = ('name', )
+    search_fields = ('name', 'short_name')
     inlines = [ProblemInOutInline]
     readonly_fields = ('id', 'owner')
     fieldsets = (
@@ -40,6 +41,8 @@ class ProblemAdmin(admin.ModelAdmin):
             },
         ),
     )
+    ordering = ('short_name', 'name', 'id')
+    list_select_related = ('owner',)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
