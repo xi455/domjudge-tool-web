@@ -20,8 +20,6 @@ Domjudge 線上程式評分系統輔助工具 網頁版
     - [pipenv](https://pipenv.pypa.io/en/latest/)
     
 ```bash
-$ py -m pip install -U pipenv
-or 
 $ python -m pip install -U pipenv
 ```
 
@@ -33,8 +31,15 @@ $ python -m pip install -U pipenv
 
 ### 使用
 
+#### Online Service
+
+[__https://hackmd.io/@biz-pg/domjudge-tool-web__](https://hackmd.io/@biz-pg/domjudge-tool-web)
+
+#### Local Service
+
 > Windows open Git Bash
-> MacOS/Linux open terminal
+
+> Mac OS/Linux open terminal
 ```bash
 $ git clone https://github.com/ntub/domjudge-tool-web.git
 ```
@@ -43,7 +48,7 @@ $ git clone https://github.com/ntub/domjudge-tool-web.git
 $ cd domjudge-tool-web
 $ pipenv install --dev
 # Create new python venv and install python packages
-$ py -m pipenv install --dev
+
 # for Windows
 $ python -m pipenv install --dev
 
@@ -52,9 +57,18 @@ $ python -m pipenv install --dev
 ```bash
 $ pipenv shell
 # active virtualenv
-$ py -m pipenv shell
+
 # for Windows
 $ python -m pipenv shell
+
+$ cp src/core/.env.example src/core/.env
+$ vi src/core/.env
+#SECRET_KEY=key-here
+#DEBUG=on
+#ALLOWED_HOSTS=*,
+#DATABASE_URL=sqlite:///sqlite.db
+#DJANGO_SUPERUSER_USERNAME=admin
+#DJANGO_SUPERUSER_PASSWORD=admin-password
 
 (venv)$ cd src
 
@@ -76,6 +90,8 @@ $ python -m pipenv shell
 Run Server
 
 ```bash
+(venv)$ cd src
+
 (venv)$ python manage.py runserver
 # Control + C can exit
 (venv)$ winpty python manage.py runserver
@@ -85,7 +101,7 @@ Run Server
 #### Web GUI
 
 1. Open [http://localhost:8000/admin/](http://localhost:8000/admin/) from browser
-2. Login your super user account
+2. Login your superuser account
 
 ## Feature
 
