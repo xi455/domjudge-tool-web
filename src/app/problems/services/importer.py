@@ -48,18 +48,19 @@ def create_in_out_text(instance: Problem):
     _id = str(instance.id).replace('-', '')
     for index, item in enumerate(instance.int_out_data.all()):
         num = index + 1
+        folder_name = 'sample' if item.is_sample else 'secret'
         input_content_b = item.input_content.\
             encode('utf-8').\
             replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
-            f'problem_{_id}/data/secret/{num}.in',
+            f'problem_{_id}/data/{folder_name}/{num}.in',
             BytesIO(input_content_b),
         )
         answer_content_b = item.answer_content.\
             encode('utf-8').\
             replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
         file_storage.save(
-            f'problem_{_id}/data/secret/{num}.ans',
+            f'problem_{_id}/data/{folder_name}/{num}.ans',
             BytesIO(answer_content_b),
         )
 

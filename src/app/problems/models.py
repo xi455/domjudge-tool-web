@@ -59,6 +59,7 @@ class ProblemInOut(models.Model):
     )
     input_content = models.TextField('輸入測資', help_text='每行前後空白會被去除')
     answer_content = models.TextField('輸出答案', help_text='每行前後空白會被去除')
+    is_sample = models.BooleanField('是否為範例測資', default=False)
 
     def save(
         self,
