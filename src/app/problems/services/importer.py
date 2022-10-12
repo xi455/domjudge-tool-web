@@ -6,8 +6,10 @@ from pathlib import Path
 from io import StringIO, BytesIO
 
 from django.core.files.storage import FileSystemStorage
+from django.http import StreamingHttpResponse
+from django.core.files import File
 
-from ..models import Problem
+from app.problems.models import Problem
 
 file_storage = FileSystemStorage(location='/tmp/problems')
 
@@ -77,3 +79,17 @@ def create_problem_zip(instance: Problem):
     )
     path = os.path.join(path_root, out)
     return path
+
+
+def build_zip_response(obj: Problem) -> StreamingHttpResponse:
+    remove_folder(obj)
+    copy_pdf(obj)
+    create_problem_yaml(obj)
+    create_in_out_text(obj)
+    create_problem_time_limit(obj)
+    zip_path = create_problem_zip(obj)
+    file = File(open(zip_path, 'rb'))
+    file_name = os.path.basename(zip_path)
+    response = StreamingHttpResponse(file, content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+    return response

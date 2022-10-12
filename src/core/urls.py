@@ -19,7 +19,27 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
 
+
+apipatterns = [
+    path("auth/", include("app.users.api.urls")),
+    path("course/", include("app.courses.api.urls")),
+    path("problem/", include("app.problems.api.urls")),
+    path("record/", include("app.submissions.api.urls")),
+    path("bulletin/", include("app.bulletins.api.urls")),
+]
+
+api_urlpatterns = [
+    # Resource urls
+
+    # Docs urls
+    path("swagger/", SchemaView.with_ui(), name="swagger"),
+    path("redoc/", SchemaView.with_ui(renderer="redoc"), name="redoc"),
+    path("docs/", RedirectView.as_view(pattern_name=DEFAULT_API_DOC_URL), name="docs"),
+    path("", include((apipatterns, "apis"))),
+]
+
 urlpatterns = [
+    path("api/", include((api_urlpatterns, "api"))),
     path('admin/register/', user_views.register, name='register'),
     path('admin/', admin.site.urls),
     path('problem/', include('app.problems.urls', namespace='problem')),

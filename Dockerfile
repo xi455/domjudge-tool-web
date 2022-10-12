@@ -8,8 +8,10 @@ VOLUME /app/assets
 
 EXPOSE 8000
 
-COPY ./Pipfile .
-COPY ./Pipfile.lock .
+ENV POETRY_VIRTUALENVS_CREATE=false
+
+COPY ./pyproject.toml .
+COPY ./poetry.lock .
 
 RUN \
   apk add --update --no-cache --virtual build-deps \
@@ -21,8 +23,8 @@ RUN \
     musl-dev libxslt-dev libffi-dev \
     jpeg-dev zlib-dev postgresql-dev && \
   \
-  pip3 install --no-cache-dir pipenv uwsgi && \
-  pipenv install --system --deploy --ignore-pipfile -v && \
+  pip3 install --no-cache-dir poetry && \
+  poetry install --no-dev && \
   \
   apk del build-deps && \
   rm -rf ~/.cache
@@ -39,7 +41,6 @@ RUN \
   chmod +x /etc/periodic/daily/django-logrotate && \
   \
   mv -v /docker/wait_database.py . && \
-  mv -v /docker/uwsgi.ini . && \
   \
   rm -rvf /docker
 
