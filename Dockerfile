@@ -24,7 +24,7 @@ RUN \
     jpeg-dev zlib-dev postgresql-dev && \
   \
   pip3 install --no-cache-dir poetry && \
-  poetry install --no-dev && \
+  poetry install --only main && \
   \
   apk del build-deps && \
   rm -rf ~/.cache
