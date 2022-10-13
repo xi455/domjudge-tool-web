@@ -14,35 +14,38 @@ class ProblemInOutInline(admin.TabularInline):
 @admin.register(Problem)
 class ProblemAdmin(admin.ModelAdmin):
     list_display = (
-        'short_name',
-        'name',
-        'time_limit',
-        'owner',
-        'id',
-        'make_zip',
+        "short_name",
+        "name",
+        "time_limit",
+        "owner",
+        "id",
+        "make_zip",
     )
-    list_filter = ('create_at', 'update_at')
-    search_fields = ('name', 'short_name')
+    list_filter = ("create_at", "update_at")
+    search_fields = ("name", "short_name")
     inlines = [ProblemInOutInline]
-    readonly_fields = ('id', 'owner')
+    readonly_fields = ("id", "owner")
     fieldsets = (
-        (None, {
-            'fields': ('id', 'owner'),
-        }),
         (
-            '題目資訊',
+            None,
             {
-                'fields': (
-                    'name',
-                    'short_name',
-                    'description_file',
-                    'time_limit',
+                "fields": ("id", "owner"),
+            },
+        ),
+        (
+            "題目資訊",
+            {
+                "fields": (
+                    "name",
+                    "short_name",
+                    "description_file",
+                    "time_limit",
                 ),
             },
         ),
     )
-    ordering = ('short_name', 'name', 'id')
-    list_select_related = ('owner',)
+    ordering = ("short_name", "name", "id")
+    list_select_related = ("owner",)
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -51,10 +54,10 @@ class ProblemAdmin(admin.ModelAdmin):
         return queryset
 
     def make_zip(self, obj, **kwargs):
-        url = reverse_lazy('problem:zip', kwargs={'pk': str(obj.id)})
+        url = reverse_lazy("problem:zip", kwargs={"pk": str(obj.id)})
         return mark_safe(f'<a href="{url}">下載 zip</a>')
 
-    make_zip.short_description = '下載壓縮檔'  # type: ignore
+    make_zip.short_description = "下載壓縮檔"  # type: ignore
 
     def save_model(self, request, obj, form, change):
         if not obj.owner_id:

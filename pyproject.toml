@@ -6,10 +6,9 @@ authors = ["jasonxie"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-django = "*"
+django = "^3.2.16"
 django-extensions = "*"
 pyyaml = "*"
-django-jazzmin = "*"
 django-environ = "*"
 django-split-settings = "*"
 psycopg2-binary = "*"
@@ -19,15 +18,24 @@ djangorestframework = "^3.14.0"
 django-filter = "^22.1"
 drf-yasg = "^1.21.4"
 django-cors-headers = "^3.13.0"
+django-jazzmin = "<=2.4.4"
 
-[tool.poetry.dev-dependencies]
-werkzeug = "*"
-flake8 = "*"
-flake8-commas = "*"
-mypy = "*"
-yapf = "*"
-ipython = "*"
+[tool.poetry.group.dev.dependencies]
+ipython = "^8.5.0"
+Werkzeug = "^2.2.2"
+black = "^22.10.0"
+flake8 = "^5.0.4"
+flake8-commas = "^2.1.0"
+mypy = "^0.982"
+isort = "^5.10.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+extend-exclude = '''
+/(
+  | migrations
+)/
+'''
