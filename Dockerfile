@@ -41,6 +41,7 @@ RUN \
   chmod +x /etc/periodic/daily/django-logrotate && \
   \
   mv -v /docker/wait_database.py . && \
+  mv -v /docker/uwsgi.ini . && \
   \
   rm -rvf /docker
 
