@@ -20,13 +20,41 @@ class DomServerClient(BaseModel):
     mask_password = models.CharField(
         "密碼",
         max_length=128,
-        editable=False,
+        # editable=False,
     )
+    disable_ssl = models.BooleanField(default=False)
+    timeout = models.BooleanField(default=False)
+    # max_connections = models.IntegerField(
+    #     default=0,
+    #     verbose_name="最大連接數",
+    #     help_text="請輸入最大連接數量",
+    # )
+    # max_keepalive_connections = models.IntegerField(
+    #     default=0,
+    #     verbose_name="最大保持連接數",
+    #     help_text="請輸入最大保持連接數量",
+    # )
+    category_id = models.BigIntegerField(
+        default=0,
+        verbose_name="類型ID",
+        help_text="請輸入類型ID",
+    )
+    affiliation_id = models.BigIntegerField(
+        default=0,
+        verbose_name="所屬關係ID",
+        help_text="請輸入所屬關係ID",
+    )
+    affiliation_country = models.CharField("所屬國家", max_length=128, default="TWN")
     owner = models.ForeignKey(
         "users.User",
         on_delete=models.CASCADE,
         related_name="dom_servers",
         verbose_name="擁有者",
+    )
+    version = models.CharField(
+        "Dom Server 版本",
+        max_length=16,
+        default="7.3.2",
     )
     api_version = models.CharField(
         "Dom Server API 版本",

@@ -1,8 +1,25 @@
+import hashlib
+
+import requests
+
 from django.contrib import admin
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
+from django_object_actions import DjangoObjectActions, action
+from pydantic import BaseModel
 
-from .models import Problem, ProblemInOut
+from app.domservers.models import DomServerClient
+
+from .crawler import ProblemCrawler
+from .models import DomServer, Problem, ProblemInOut
+
+# from src.core.settings import DOMSERVER_URL, DOMSERVER_USERNAME, DOMSERVER_PASSWORD
+
+
+class ProblemTestCase(BaseModel):
+    input: str
+    out: str
 
 
 class ProblemInOutInline(admin.TabularInline):
@@ -11,25 +28,32 @@ class ProblemInOutInline(admin.TabularInline):
     extra = 1
 
 
+@admin.register(DomServer)
+class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
+    pass
+
+
 @admin.register(Problem)
-class ProblemAdmin(admin.ModelAdmin):
+class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_display = (
         "short_name",
         "name",
         "time_limit",
         "owner",
         "id",
+        "is_processed",
+        # "is_latest_inout",
         "make_zip",
     )
     list_filter = ("create_at", "update_at")
     search_fields = ("name", "short_name")
     inlines = [ProblemInOutInline]
-    readonly_fields = ("id", "owner")
+    readonly_fields = ("id", "owner", "inout_illustrate")
     fieldsets = (
         (
             None,
             {
-                "fields": ("id", "owner"),
+                "fields": ("id", "owner", "inout_illustrate"),
             },
         ),
         (
@@ -46,6 +70,73 @@ class ProblemAdmin(admin.ModelAdmin):
     )
     ordering = ("short_name", "name", "id")
     list_select_related = ("owner",)
+    actions = ["upload_selected", "updown_selected"]
+    change_actions = ("problem_inout_new_data",)
+
+    @admin.display(description="測資更新說明")
+    def inout_illustrate(self, *args, **kwargs):
+        return mark_safe(
+            f"""
+                若是想新增、修改、刪除測試資料請在操作完後按下 “儲存並繼續編輯” ，
+                <br>
+                再按下 ”更新測資“ 即可將測試資料上傳至 domjudge。
+            """
+        )
+
+    @action(label="更新測資", description="update inout")  # optional
+    def problem_inout_new_data(self, request, obj):
+        problem_inout = obj.int_out_data.all()
+        # problem_id = obj.problem_text_id
+
+        domserver = obj.domserver_problem.all()
+        for object in domserver:
+            domclient = DomServerClient.objects.filter(name=object.server_name)
+
+            url = domclient[0].host
+            username = domclient[0].username
+            password = domclient[0].mask_password
+
+            # print(url, username, password)
+            problem_crawler = ProblemCrawler(url, username, password)
+            # print(object.problem_web_id)
+            testcases_dict = problem_crawler.request_testcases_get_all(
+                problem_id=object.problem_web_id
+            )
+            problems_dict = {}
+
+            for obj in problem_inout:
+                problem_md5 = self.md5_hash(obj.input_content) + self.md5_hash(
+                    obj.answer_content
+                )
+
+                info = {"input": obj.input_content, "out": obj.answer_content}
+
+                problem_testcase = ProblemTestCase(**info)
+                problems_dict[problem_md5] = problem_testcase
+
+            testcases_md5 = set(testcases_dict.keys())
+            problems_md5 = set(problems_dict.keys())
+
+            problems_difference = problems_md5.difference(testcases_md5)
+            testcases_difference = testcases_md5.difference(problems_md5)
+
+            for md5 in testcases_difference:
+                id = testcases_dict[md5].id
+                problem_crawler.request_delete(id=id)
+
+            for md5 in problems_difference:
+                testcase_in, testcase_out = (
+                    problems_dict[md5].input,
+                    problems_dict[md5].out,
+                )
+                form_data = {}
+
+                form_data["add_input"] = ("add.in", testcase_in)
+                form_data["add_output"] = ("add.out", testcase_out)
+
+                problem_crawler.request_update(
+                    form_data=form_data, id=object.problem_web_id
+                )
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -59,7 +150,67 @@ class ProblemAdmin(admin.ModelAdmin):
 
     make_zip.short_description = "下載壓縮檔"  # type: ignore
 
+    def md5_hash(self, testcase):
+        encoded_string = testcase.encode("utf-8")
+        md5_hash = hashlib.md5(encoded_string).hexdigest()
+
+        return md5_hash
+
     def save_model(self, request, obj, form, change):
         if not obj.owner_id:
             obj.owner = request.user
+
         super().save_model(request, obj, form, change)
+
+    def upload_selected(self, request, queryset):
+        domserver_dict = {
+            object.name: object.host for object in DomServerClient.objects.all()
+        }
+        domserver_keys = [key for key in domserver_dict.keys()]
+
+        update_problem_name = {}
+        process = False
+        for query in queryset:
+
+            if query.is_processed:
+                process = True
+                used_server_list = []
+
+                for object in query.domserver.all():
+                    used_server_list.append(
+                        f"{object.server_name}({object.problem_web_contest})"
+                    )
+
+                if used_server_list:
+                    update_problem_name[query.name] = ", ".join((used_server_list))
+
+        field_name = ""
+        if domserver_keys:
+            url = domserver_dict[domserver_keys[0]] + "api/v4/contests?strict=false"
+            # 發送 GET 請求
+            response = requests.get(url)
+            data = response.json()  # 將返回的 JSON 資料轉換為 Python 字典或列表
+            field_name = [field["formal_name"] for field in data]
+
+        id_list = request.POST.getlist("_selected_action")
+        upload_objects = Problem.objects.filter(id__in=id_list)
+
+        context = {
+            "process": process,
+            "upload_objects": upload_objects,
+            "update_problem_name": update_problem_name,
+            "domserver": domserver_keys,
+            "domserver_dict": domserver_dict,
+            "field_name": field_name,
+        }
+
+        return render(request, "admin/upload.html", context)
+
+    upload_selected.short_description = "上傳所選的 題目"
+
+    def updown_selected(self, request, queryset):
+        for query in queryset:
+            query.is_processed = False
+        Problem.objects.bulk_update(queryset, ["is_processed"])
+
+    updown_selected.short_description = "撤銷所選的 題目"

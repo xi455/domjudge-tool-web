@@ -26,6 +26,10 @@ class Problem(BaseModel):
         related_name="problems",
         verbose_name="擁有者",
     )
+    problem_text_id = models.CharField("題目ID", max_length=10, blank=True)
+    is_processed = models.BooleanField("是否上傳", default=False)
+    # domserver_info = models.CharField("已上傳的 domserver", max_length=128, blank=True)
+    # is_latest_inout = models.BooleanField("最新測資", default=False)
 
     def delete(self, using=None, keep_parents=False):
         pdf_path = self.description_file.path
@@ -78,3 +82,14 @@ class ProblemInOut(models.Model):
     class Meta:
         verbose_name = "題目輸入輸出"
         verbose_name_plural = "題目輸入輸出"
+
+
+class DomServer(models.Model):
+    problem = models.ForeignKey(
+        Problem,
+        on_delete=models.CASCADE,
+        related_name="domserver",
+    )
+    server_name = models.TextField("Server 名稱", max_length=68)
+    problem_web_id = models.TextField("網站題目號碼", max_length=68)
+    problem_web_contest = models.TextField("網站比賽區號")
