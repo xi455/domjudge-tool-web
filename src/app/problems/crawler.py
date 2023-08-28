@@ -151,6 +151,14 @@ class ProblemCrawler:
                 self.url + f"jury/problems/{id}/testcases", files=form_data
             )
 
+    def request_problem_info_update(self, data, files, id):
+        if self.session:
+            page = self.session.get(self.url + f"jury/problems/{id}/edit")
+            
+            page = self.session.post(
+                self.url + f"jury/problems/{id}/edit", data=data, files=files
+            )
+
     def request_delete(self, id):
         if self.session:
             page = self.session.get(self.url + f"jury/problems/{id}/delete_testcase")

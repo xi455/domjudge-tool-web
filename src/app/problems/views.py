@@ -23,10 +23,10 @@ def problem_view(request):
 
     if request.method == "POST":
         upload_objects = request.POST.getlist("upload_objects")
-        domserver = request.POST.get("domserver")
+        domserver_name = request.POST.get("domserver")
         contests = request.POST.get("contests")
 
-        domclient = get_object_or_404(DomServerClient, name=domserver)
+        domclient = get_object_or_404(DomServerClient, name=domserver_name)
         domserver_host = domclient.host
         domserver_user = domclient.username
         domserver_pwd = domclient.mask_password
@@ -63,7 +63,7 @@ def problem_view(request):
 
                     domserver = DomServer(
                         problem=upload_list[index],
-                        server_name=domserver,
+                        server_name=domserver_name,
                         problem_web_id=problem_id_list[index],
                         problem_web_contest=option,
                     )
@@ -74,7 +74,7 @@ def problem_view(request):
 
                 messages.success(request, "題目上傳成功！！")
             else:
-                messages.error(request, "題目名稱重複！！ 請重新命名或選擇新題目上傳")
+                messages.error(request, "題目名稱重複！！ 請重新選擇新題目上傳")
 
     return redirect("/admin/problems/problem/")
 

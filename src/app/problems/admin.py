@@ -42,7 +42,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         "owner",
         "id",
         "is_processed",
-        # "is_latest_inout",
         "make_zip",
     )
     list_filter = ("create_at", "update_at")
@@ -71,24 +70,22 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     ordering = ("short_name", "name", "id")
     list_select_related = ("owner",)
     actions = ["upload_selected", "updown_selected"]
-    change_actions = ("problem_inout_new_data",)
+    change_actions = ("problem_inout_new_data", "problem_info_new_data")
 
     @admin.display(description="測資更新說明")
     def inout_illustrate(self, *args, **kwargs):
         return mark_safe(
             f"""
-                若是想新增、修改、刪除測試資料請在操作完後按下 “儲存並繼續編輯” ，
-                <br>
-                再按下 ”更新測資“ 即可將測試資料上傳至 domjudge。
+                若是想新增、修改、刪除測試資料或者題目資訊請在操作完後按下 “儲存並繼續編輯”，
+                再按下 ”更新測資“ 或者 ”更新題目資訊“ 即可將資料上傳至 domjudge。
             """
         )
 
-    @action(label="更新測資", description="update inout")  # optional
+    @action(label="更新測資", description="update inout")
     def problem_inout_new_data(self, request, obj):
         problem_inout = obj.int_out_data.all()
-        # problem_id = obj.problem_text_id
+        domserver = obj.domserver.all()
 
-        domserver = obj.domserver_problem.all()
         for object in domserver:
             domclient = DomServerClient.objects.filter(name=object.server_name)
 
@@ -96,9 +93,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             username = domclient[0].username
             password = domclient[0].mask_password
 
-            # print(url, username, password)
             problem_crawler = ProblemCrawler(url, username, password)
-            # print(object.problem_web_id)
             testcases_dict = problem_crawler.request_testcases_get_all(
                 problem_id=object.problem_web_id
             )
@@ -129,14 +124,43 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                     problems_dict[md5].input,
                     problems_dict[md5].out,
                 )
-                form_data = {}
 
+                form_data = {}
                 form_data["add_input"] = ("add.in", testcase_in)
                 form_data["add_output"] = ("add.out", testcase_out)
 
                 problem_crawler.request_update(
                     form_data=form_data, id=object.problem_web_id
                 )
+
+    @action(label="更新題目資訊", description="update problem info")
+    def problem_info_new_data(self, request, obj):
+        name = obj.name
+        time_limit = obj.time_limit
+        file = obj.description_file
+
+        data = {}
+        data["problem[name]"] = name
+        data["problem[timelimit]"] = time_limit
+
+        files = {}
+        files["problem[problemtextFile]"] = obj.description_file
+        # files = {'problem[problemtextFile]': (
+        # 'My_Estimate_AWS_.pdf', open('path/to/My_Estimate_AWS_.pdf', 'rb'), 'application/pdf')}
+
+        domserver = obj.domserver.all()
+
+        for object in domserver:
+            domclient = DomServerClient.objects.filter(name=object.server_name)
+
+            url = domclient[0].host
+            username = domclient[0].username
+            password = domclient[0].mask_password
+
+            problem_crawler = ProblemCrawler(url, username, password)
+            problem_crawler.request_problem_info_update(
+                data=data, files=files, id=object.problem_web_id
+            )
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)

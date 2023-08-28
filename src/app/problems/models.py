@@ -26,7 +26,7 @@ class Problem(BaseModel):
         related_name="problems",
         verbose_name="擁有者",
     )
-    problem_text_id = models.CharField("題目ID", max_length=10, blank=True)
+    # problem_text_id = models.CharField("題目ID", max_length=10, blank=True)
     is_processed = models.BooleanField("是否上傳", default=False)
     # domserver_info = models.CharField("已上傳的 domserver", max_length=128, blank=True)
     # is_latest_inout = models.BooleanField("最新測資", default=False)
@@ -90,6 +90,6 @@ class DomServer(models.Model):
         on_delete=models.CASCADE,
         related_name="domserver",
     )
-    server_name = models.TextField("Server 名稱", max_length=68)
-    problem_web_id = models.TextField("網站題目號碼", max_length=68)
-    problem_web_contest = models.TextField("網站比賽區號")
+    server_name = models.CharField("Server 名稱", max_length=68)
+    problem_web_id = models.CharField("網站題目ID", max_length=68)
+    problem_web_contest = models.CharField("網站比賽區號", max_length=68)
