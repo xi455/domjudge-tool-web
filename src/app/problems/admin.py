@@ -137,7 +137,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     def problem_info_new_data(self, request, obj):
         name = obj.name
         time_limit = obj.time_limit
-        file = obj.description_file
 
         data = {}
         data["problem[name]"] = name
@@ -145,8 +144,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         files = {}
         files["problem[problemtextFile]"] = obj.description_file
-        # files = {'problem[problemtextFile]': (
-        # 'My_Estimate_AWS_.pdf', open('path/to/My_Estimate_AWS_.pdf', 'rb'), 'application/pdf')}
 
         domserver = obj.domserver.all()
 
@@ -187,11 +184,17 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def upload_selected(self, request, queryset):
-        domserver_dict = {
-            object.name: object.host for object in DomServerClient.objects.all()
-        }
-        domserver_keys = [key for key in domserver_dict.keys()]
+        domserver_dict = {}
+        domserver_accout = {}
+        for object in DomServerClient.objects.all():
 
+            domserver_dict[object.name] = object.host
+            domserver_accout[object.name] = {
+                "username": object.username,
+                "password": object.mask_password,
+            }
+
+        domserver_keys = [key for key in domserver_dict.keys()]
         update_problem_name = {}
         process = False
         for query in queryset:
@@ -210,10 +213,18 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         field_name = ""
         if domserver_keys:
-            url = domserver_dict[domserver_keys[0]] + "api/v4/contests?strict=false"
-            # 發送 GET 請求
-            response = requests.get(url)
-            data = response.json()  # 將返回的 JSON 資料轉換為 Python 字典或列表
+            host = domserver_dict[domserver_keys[0]]
+            username = domserver_accout[domserver_keys[0]].get("username")
+            password = domserver_accout[domserver_keys[0]].get("password")
+
+            problem_crawler = ProblemCrawler(
+                url=host,
+                username=username,
+                password=password
+            )
+            problem_crawler.request_contest_problem_count(contest="2")
+            data = problem_crawler.request_contests_get_all()
+
             field_name = [field["formal_name"] for field in data]
 
         id_list = request.POST.getlist("_selected_action")
@@ -228,7 +239,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             "field_name": field_name,
         }
 
-        return render(request, "admin/upload.html", context)
+        return render(request, "admin/upload_process.html", context)
 
     upload_selected.short_description = "上傳所選的 題目"
 

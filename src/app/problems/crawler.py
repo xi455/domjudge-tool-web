@@ -41,12 +41,11 @@ class ProblemCrawler:
 
         raise exceptions.ProblemDownloaderLoginException("登入失敗")
 
-    def request_upload(self, files, contests):
+    def request_contest_id(self, contests):
         if self.session:
             page = self.session.get(self.url + "jury/problems")
             soup = BeautifulSoup(page.text, "html.parser")
 
-            contest_id = ""
             contest_options = soup.select("option")
             if contests != "":
                 for index in range(1, len(contest_options)):
@@ -54,9 +53,12 @@ class ProblemCrawler:
 
                     if option == contests:
                         contest_id = int(contest_options[index].get("value"))
-                        # print(contest_options[index].text)
-                        break
+                        return contest_id
 
+    def request_upload(self, files, contests):
+        if self.session:
+            contest_id = self.request_contest_id(contests)
+            print(contest_id)
             data = {
                 "problem_upload_multiple[contest]": contest_id,
             }
@@ -64,6 +66,7 @@ class ProblemCrawler:
             for file_name in files:
                 problem_name_list.append(file_name[1][0])
 
+            print(data)
             page = self.session.post(self.url + "jury/problems", data=data, files=files)
             # page = self.session.get("https://lab-judge.ntub.tw/jury/problems")
             soup = BeautifulSoup(page.text, "html.parser")
@@ -88,10 +91,89 @@ class ProblemCrawler:
                             td.select_one("a").get("href").split("/")[-1]
                         )
 
-            if contest_id == "":
-                option = "Do not link to a contest"
+            return response, problem_id_list, contest_id
 
-            return response, problem_id_list, option
+    def request_contest_problem_count(self, contest):
+        if self.session:
+            contest = self.request_contest_id(contests=contest)
+            page = self.session.get(self.url + f"jury/contests/{contest}/edit")
+
+            soup = BeautifulSoup(page.text, "html.parser")
+
+            thead_elements = soup.select(".table thead")
+
+            tbody = ""
+            for thead in thead_elements:
+                tbody = thead.find_next_sibling("tbody")
+            if tbody:
+                tr_elements_length = len(tbody.select("tr"))
+
+                return tr_elements_length
+
+    def request_contest_upload(self, contest, problem_data):
+        if self.session:
+            contest = self.request_contest_id(contests=contest)
+            print(contest)
+            page = self.session.get(self.url + f"jury/contests/{contest}/edit")
+
+            soup = BeautifulSoup(page.text, "html.parser")
+            # 創建一個空字典來存放 data
+            data = {}
+
+            # 找到所有的 input 和 select 元素
+            input_elements = soup.find_all("input")
+            select_elements = soup.find_all("select")
+
+            # 找到所有的 custom-radio 元素
+            radio_elements = soup.find_all("div", class_="custom-control custom-radio")
+
+            # 遍歷 input 元素並生成 form-data
+            for input_elem in input_elements:
+                if input_elem.get("name"):
+                    data[input_elem.get("name")] = input_elem.get("value", "")
+
+            # 遍歷 select 元素並生成 form-data
+            for select_elem in select_elements:
+                if select_elem.get("name"):
+                    selected_option = select_elem.find("option", selected=True)
+                    selected_value = selected_option.get("value") if selected_option else ""
+                    data[select_elem.get("name")] = selected_value
+
+            # 遍歷 custom-radio 元素並找到被選中的 radio 值
+            for radio_elem in radio_elements:
+                input_elem = radio_elem.find("input", checked=True)
+                if input_elem:
+                    name = input_elem.get("name")
+                    value = input_elem.get("value")
+                    data[name] = value
+
+            del data["contest[teams][]"]
+            del data["contest[teamCategories][]"]
+
+            data.update(problem_data)
+            data["contest[save]"]: ""
+            # print(data)
+            page = self.session.post(
+                self.url + f"jury/contests/{contest}/edit", data=data
+            )
+
+            soup = BeautifulSoup(page.text, "html.parser")
+            error_elements = soup.select_one(".form-error-message")
+
+            if error_elements:
+                response = False
+            else:
+                response = True
+
+            return response
+    def request_contests_get_all(self):
+        if self.session:
+            url = self.url + "api/v4/contests?strict=false"
+            # 發送 GET 請求
+            response = requests.get(url)
+            data = response.json()  # 將返回的 JSON 資料轉換為 Python 字典或列表
+
+            return data
 
     def request_testcases_get_all(self, problem_id):
         if self.session:
@@ -154,7 +236,7 @@ class ProblemCrawler:
     def request_problem_info_update(self, data, files, id):
         if self.session:
             page = self.session.get(self.url + f"jury/problems/{id}/edit")
-            
+
             page = self.session.post(
                 self.url + f"jury/problems/{id}/edit", data=data, files=files
             )

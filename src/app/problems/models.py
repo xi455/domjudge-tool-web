@@ -92,4 +92,5 @@ class DomServer(models.Model):
     )
     server_name = models.CharField("Server 名稱", max_length=68)
     problem_web_id = models.CharField("網站題目ID", max_length=68)
+    problem_shortname = models.CharField("網站題目代號", max_length=68)
     problem_web_contest = models.CharField("網站比賽區號", max_length=68)

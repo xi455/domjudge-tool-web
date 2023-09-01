@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import get_zip, upload_view
+from .views import get_zip, problem_view
 
 app_name = "problems"
 
