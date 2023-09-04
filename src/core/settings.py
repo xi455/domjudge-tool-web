@@ -35,6 +35,7 @@ MODE = env("MODE", default="development" if DEBUG else "production")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+
 # Application definition
 
 DJANGO_APPS = [

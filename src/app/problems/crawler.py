@@ -5,8 +5,6 @@ from pydantic import BaseModel
 
 import app.problems.exceptions as exceptions
 
-# from src.core.settings import DOMSERVER_URL, DOMSERVER_USERNAME, DOMSERVER_PASSWORD
-
 
 class TestCase(BaseModel):
     id: str
@@ -52,23 +50,23 @@ class ProblemCrawler:
                     option = contest_options[index].text.split(" - ")[-1]
 
                     if option == contests:
-                        contest_id = int(contest_options[index].get("value"))
+                        contest_id = contest_options[index].get("value")
                         return contest_id
+            return None
 
     def request_upload(self, files, contests):
         if self.session:
             contest_id = self.request_contest_id(contests)
-            print(contest_id)
+
             data = {
                 "problem_upload_multiple[contest]": contest_id,
             }
+
             problem_name_list = []
             for file_name in files:
                 problem_name_list.append(file_name[1][0])
 
-            print(data)
             page = self.session.post(self.url + "jury/problems", data=data, files=files)
-            # page = self.session.get("https://lab-judge.ntub.tw/jury/problems")
             soup = BeautifulSoup(page.text, "html.parser")
             alert = soup.select_one(".alert-dismissible").get("class")
 
@@ -96,36 +94,36 @@ class ProblemCrawler:
     def request_contest_problem_count(self, contest):
         if self.session:
             contest = self.request_contest_id(contests=contest)
+
             page = self.session.get(self.url + f"jury/contests/{contest}/edit")
-
             soup = BeautifulSoup(page.text, "html.parser")
-
             thead_elements = soup.select(".table thead")
 
             tbody = ""
             for thead in thead_elements:
                 tbody = thead.find_next_sibling("tbody")
+
             if tbody:
                 tr_elements_length = len(tbody.select("tr"))
 
                 return tr_elements_length
 
-    def request_contest_upload(self, contest, problem_data):
+            return 0
+
+    def request_contest_problem_upload(self, contest, problem_data):
         if self.session:
             contest = self.request_contest_id(contests=contest)
-            print(contest)
             page = self.session.get(self.url + f"jury/contests/{contest}/edit")
 
             soup = BeautifulSoup(page.text, "html.parser")
-            # 創建一個空字典來存放 data
-            data = {}
-
             # 找到所有的 input 和 select 元素
+            # 找到所有的 custom-radio 元素
             input_elements = soup.find_all("input")
             select_elements = soup.find_all("select")
-
-            # 找到所有的 custom-radio 元素
             radio_elements = soup.find_all("div", class_="custom-control custom-radio")
+
+            # 創建一個空字典來存放 data
+            data = {}
 
             # 遍歷 input 元素並生成 form-data
             for input_elem in input_elements:
@@ -136,7 +134,9 @@ class ProblemCrawler:
             for select_elem in select_elements:
                 if select_elem.get("name"):
                     selected_option = select_elem.find("option", selected=True)
-                    selected_value = selected_option.get("value") if selected_option else ""
+                    selected_value = (
+                        selected_option.get("value") if selected_option else ""
+                    )
                     data[select_elem.get("name")] = selected_value
 
             # 遍歷 custom-radio 元素並找到被選中的 radio 值
@@ -152,7 +152,7 @@ class ProblemCrawler:
 
             data.update(problem_data)
             data["contest[save]"]: ""
-            # print(data)
+
             page = self.session.post(
                 self.url + f"jury/contests/{contest}/edit", data=data
             )
@@ -166,6 +166,7 @@ class ProblemCrawler:
                 response = True
 
             return response
+
     def request_contests_get_all(self):
         if self.session:
             url = self.url + "api/v4/contests?strict=false"
@@ -241,6 +242,10 @@ class ProblemCrawler:
                 self.url + f"jury/problems/{id}/edit", data=data, files=files
             )
 
-    def request_delete(self, id):
+    def request_testcase_delete(self, id):
         if self.session:
             page = self.session.get(self.url + f"jury/problems/{id}/delete_testcase")
+
+    def request_problem_delete(self, id):
+        if self.session:
+            page = self.session.post(self.url + f"jury/problems/{id}/delete")

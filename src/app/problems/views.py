@@ -43,10 +43,6 @@ def problem_view(request):
         upload_content = {}
         upload_content_list = []
 
-        # contests = problem_crawler.request_contest_id(
-        #         contests=contests
-        # )
-
         contest_problem_count = problem_crawler.request_contest_problem_count(
             contest=contests
         )
@@ -55,6 +51,7 @@ def problem_view(request):
             obj = get_object_or_404(Problem, pk=pk)
 
             is_problem = False
+            object = None
             for object in obj.domserver.all():
                 if domserver_name == object.server_name:
                     is_problem = True
@@ -62,15 +59,17 @@ def problem_view(request):
 
             if is_problem:
                 upload_content_list.append(obj)
-                upload_content.update({
-                    f"contest[problems][{contest_problem_count}][problem]": object.problem_web_id,
-                    f"contest[problems][{contest_problem_count}][shortname]": object.problem_shortname,
-                    f"contest[problems][{contest_problem_count}][points]": "1",
-                    f"contest[problems][{contest_problem_count}][allowSubmit]": "1",
-                    f"contest[problems][{contest_problem_count}][allowJudge]": "1",
-                    f"contest[problems][{contest_problem_count}][color]": "",
-                    f"contest[problems][{contest_problem_count}][lazyEvalResults]": "0",
-                })
+                upload_content.update(
+                    {
+                        f"contest[problems][{contest_problem_count}][problem]": object.problem_web_id,
+                        f"contest[problems][{contest_problem_count}][shortname]": object.problem_shortname,
+                        f"contest[problems][{contest_problem_count}][points]": "1",
+                        f"contest[problems][{contest_problem_count}][allowSubmit]": "1",
+                        f"contest[problems][{contest_problem_count}][allowJudge]": "1",
+                        f"contest[problems][{contest_problem_count}][color]": "",
+                        f"contest[problems][{contest_problem_count}][lazyEvalResults]": "0",
+                    }
+                )
                 contest_problem_count += 1
             else:
                 upload_list.append(obj)
@@ -84,8 +83,35 @@ def problem_view(request):
                         (obj.name, content, "application/zip"),
                     )
                 )
+
+        if upload_content:
+            response = problem_crawler.request_contest_problem_upload(
+                contest=contests, problem_data=upload_content
+            )
+            if response:
+                for index in range(len(upload_content_list)):
+                    problem_web_id = None
+                    for object in upload_content_list[index].domserver.all():
+                        if object.server_name == domserver_name:
+                            problem_web_id = object.problem_web_id
+                            break
+                    domserver = DomServer(
+                        problem=upload_content_list[index],
+                        server_name=domserver_name,
+                        problem_web_id=problem_web_id,
+                        problem_shortname=upload_content_list[index].short_name,
+                        problem_web_contest=contests,
+                    )
+                    domserver.save()
+                #
+                # 使用 bulk_update 方法一次性更新多個物件
+                Problem.objects.bulk_update(upload_list, ["is_processed"])
+
+                messages.success(request, "題目更新成功！！")
+            else:
+                messages.error(request, "題目重複！！ 請重新選擇新題目上傳")
+
         if upload_files:
-            print("upload_files")
             (
                 response,
                 problem_id_list,
@@ -109,33 +135,6 @@ def problem_view(request):
                 Problem.objects.bulk_update(upload_list, ["is_processed"])
 
                 messages.success(request, "題目上傳成功！！")
-            else:
-                messages.error(request, "題目重複！！ 請重新選擇新題目上傳")
-
-        if upload_content:
-            print("upload_content")
-            response = problem_crawler.request_contest_upload(contest=contests, problem_data=upload_content)
-            if response:
-                for index in range(len(upload_content_list)):
-                    problem_web_id = ""
-                    for object in upload_content_list[index].domserver.all():
-                        if object.server_name == contests:
-                            print(object.problem_web_id)
-                            problem_web_id = object.problem_web_id
-                            break
-                    domserver = DomServer(
-                        problem=upload_content_list[index],
-                        server_name=domserver_name,
-                        problem_web_id=problem_web_id,
-                        problem_shortname=upload_content_list[index].short_name,
-                        problem_web_contest=contests,
-                    )
-                    domserver.save()
-                #
-                # 使用 bulk_update 方法一次性更新多個物件
-                Problem.objects.bulk_update(upload_list, ["is_processed"])
-
-                messages.success(request, "題目更新成功！！")
             else:
                 messages.error(request, "題目重複！！ 請重新選擇新題目上傳")
     return redirect("/admin/problems/problem/")

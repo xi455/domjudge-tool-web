@@ -1,7 +1,5 @@
 import hashlib
 
-import requests
-
 from django.contrib import admin
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -13,8 +11,7 @@ from app.domservers.models import DomServerClient
 
 from .crawler import ProblemCrawler
 from .models import DomServer, Problem, ProblemInOut
-
-# from src.core.settings import DOMSERVER_URL, DOMSERVER_USERNAME, DOMSERVER_PASSWORD
+from django.contrib.auth.hashers import make_password, check_password
 
 
 class ProblemTestCase(BaseModel):
@@ -117,7 +114,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
             for md5 in testcases_difference:
                 id = testcases_dict[md5].id
-                problem_crawler.request_delete(id=id)
+                problem_crawler.request_testcase_delete(id=id)
 
             for md5 in problems_difference:
                 testcase_in, testcase_out = (
@@ -218,11 +215,8 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             password = domserver_accout[domserver_keys[0]].get("password")
 
             problem_crawler = ProblemCrawler(
-                url=host,
-                username=username,
-                password=password
+                url=host, username=username, password=password
             )
-            problem_crawler.request_contest_problem_count(contest="2")
             data = problem_crawler.request_contests_get_all()
 
             field_name = [field["formal_name"] for field in data]
@@ -244,8 +238,38 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     upload_selected.short_description = "上傳所選的 題目"
 
     def updown_selected(self, request, queryset):
+        domclients = DomServerClient.objects.all()
+        domclients_info = {}
+
+        for domclient in domclients:
+            domclients_info[domclient.name] = {
+                "host": domclient.host,
+                "username": domclient.username,
+                "password": domclient.mask_password,
+            }
+
         for query in queryset:
             query.is_processed = False
+
+            problem_del = {}
+            problem_domserver = query.domserver.all()
+            for server in problem_domserver:
+                if server.server_name not in problem_del:
+                    problem_del[server.server_name] = server.problem_web_id
+
+            for key, value in problem_del.items():
+                host = domclients_info[key].get("host")
+                username = domclients_info[key].get("username")
+                password = domclients_info[key].get("password")
+
+                problem_crawler = ProblemCrawler(
+                    url=host,
+                    username=username,
+                    password=password,
+                )
+
+                problem_crawler.request_problem_delete(id=value)
+
         Problem.objects.bulk_update(queryset, ["is_processed"])
 
     updown_selected.short_description = "撤銷所選的 題目"
