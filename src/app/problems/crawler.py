@@ -1,3 +1,5 @@
+from enum import Enum
+
 import requests
 
 from bs4 import BeautifulSoup
@@ -9,6 +11,30 @@ import app.problems.exceptions as exceptions
 class TestCase(BaseModel):
     id: str
     file_id: str
+
+
+class HomePath(str, Enum):
+    LOGIN = "/login"
+    JURY = "/jury"
+
+
+class ProblemPath(str, Enum):
+    GET = "jury/problems"
+    ADD = "jury/problems"
+    EDIT = "jury/problems/{}/edit"
+    DELETE = "jury/problems/{}/delete"
+
+
+class ConTestPath(str, Enum):
+    GET = "jury/problems"
+    EDIT = "jury/contests/{}/edit"
+
+
+class TestCasePath(str, Enum):
+    GET = "jury/problems/{}/testcases"
+    GET_INPUT = "jury/problems/{}/testcases/{}/fetch/input"
+    GET_OUTPUT = "jury/problems/{}/testcases/{}/fetch/output"
+    DELETE = "jury/problems/{}/delete_testcase"
 
 
 class ProblemCrawler:
@@ -26,226 +52,194 @@ class ProblemCrawler:
 
     def login(self):
         session = requests.Session()
-        page = session.get(self.url + "login")
+        page = session.get(self.url + HomePath.LOGIN)
         soup = BeautifulSoup(page.text, "html.parser")
         data = {ele.get("name"): ele.get("value") for ele in soup.select("input")}
         data["_username"] = self.username
         data["_password"] = self.password
 
-        response = session.post(self.url + "login", data=data)
+        response = session.post(self.url + HomePath.LOGIN, data=data)
 
-        if response.url == self.url + "jury":
+        if response.url == self.url + HomePath.JURY:
             return session
 
         raise exceptions.ProblemDownloaderLoginException("登入失敗")
 
-    def request_contest_id(self, contests):
-        if self.session:
-            page = self.session.get(self.url + "jury/problems")
-            soup = BeautifulSoup(page.text, "html.parser")
+    def get_contest_id(self, contests):
+        page = self.session.get(self.url + ConTestPath.GET)
+        soup = BeautifulSoup(page.text, "html.parser")
 
-            contest_options = soup.select("option")
-            if contests != "":
-                for index in range(1, len(contest_options)):
-                    option = contest_options[index].text.split(" - ")[-1]
+        contest_options = soup.select("option")
+        if contests != "":
+            for index in range(1, len(contest_options)):
+                option = contest_options[index].text.split(" - ")[-1]
 
-                    if option == contests:
-                        contest_id = contest_options[index].get("value")
-                        return contest_id
-            return None
+                if option == contests:
+                    contest_id = contest_options[index].get("value")
+                    return contest_id
 
-    def request_upload(self, files, contests):
-        if self.session:
-            contest_id = self.request_contest_id(contests)
+    def upload_problem(self, files, contests):
+        contest_id = self.get_contest_id(contests)
 
-            data = {
-                "problem_upload_multiple[contest]": contest_id,
-            }
+        data = {
+            "problem_upload_multiple[contest]": contest_id,
+        }
 
-            problem_name_list = []
-            for file_name in files:
-                problem_name_list.append(file_name[1][0])
+        problem_name_list = []
+        for file_name in files:
+            problem_name_list.append(file_name[1][0])
 
-            page = self.session.post(self.url + "jury/problems", data=data, files=files)
-            soup = BeautifulSoup(page.text, "html.parser")
-            alert = soup.select_one(".alert-dismissible").get("class")
+        page = self.session.post(self.url + ProblemPath.ADD, data=data, files=files)
+        soup = BeautifulSoup(page.text, "html.parser")
+        alert = soup.select_one(".alert-dismissible").get("class")
 
-            if "alert-info" in alert:
-                response = True
-            else:
-                response = False
+        if "alert-info" in alert:
+            is_succeed = True
+        else:
+            is_succeed = False
 
-            page = self.session.get(self.url + "jury/problems")
-            soup = BeautifulSoup(page.text, "html.parser")
+        page = self.session.get(self.url + ProblemPath.GET)
+        soup = BeautifulSoup(page.text, "html.parser")
 
-            problem_id_list = []
-            td_elements = soup.select("table td")
-            for td in td_elements:
-                for name in problem_name_list:
-                    text = td.text.strip()
+        problem_id_list = []
+        td_elements = soup.select("table td")
+        for td in td_elements:
+            for name in problem_name_list:
+                text = td.text.strip()
 
-                    if text == name:
-                        problem_id_list.append(
-                            td.select_one("a").get("href").split("/")[-1]
-                        )
-
-            return response, problem_id_list, contest_id
-
-    def request_contest_problem_count(self, contest):
-        if self.session:
-            contest = self.request_contest_id(contests=contest)
-
-            page = self.session.get(self.url + f"jury/contests/{contest}/edit")
-            soup = BeautifulSoup(page.text, "html.parser")
-            thead_elements = soup.select(".table thead")
-
-            tbody = ""
-            for thead in thead_elements:
-                tbody = thead.find_next_sibling("tbody")
-
-            if tbody:
-                tr_elements_length = len(tbody.select("tr"))
-
-                return tr_elements_length
-
-            return 0
-
-    def request_contest_problem_upload(self, contest, problem_data):
-        if self.session:
-            contest = self.request_contest_id(contests=contest)
-            page = self.session.get(self.url + f"jury/contests/{contest}/edit")
-
-            soup = BeautifulSoup(page.text, "html.parser")
-            # 找到所有的 input 和 select 元素
-            # 找到所有的 custom-radio 元素
-            input_elements = soup.find_all("input")
-            select_elements = soup.find_all("select")
-            radio_elements = soup.find_all("div", class_="custom-control custom-radio")
-
-            # 創建一個空字典來存放 data
-            data = {}
-
-            # 遍歷 input 元素並生成 form-data
-            for input_elem in input_elements:
-                if input_elem.get("name"):
-                    data[input_elem.get("name")] = input_elem.get("value", "")
-
-            # 遍歷 select 元素並生成 form-data
-            for select_elem in select_elements:
-                if select_elem.get("name"):
-                    selected_option = select_elem.find("option", selected=True)
-                    selected_value = (
-                        selected_option.get("value") if selected_option else ""
+                if text == name:
+                    problem_id_list.append(
+                        td.select_one("a").get("href").split("/")[-1]
                     )
-                    data[select_elem.get("name")] = selected_value
 
-            # 遍歷 custom-radio 元素並找到被選中的 radio 值
-            for radio_elem in radio_elements:
-                input_elem = radio_elem.find("input", checked=True)
-                if input_elem:
-                    name = input_elem.get("name")
-                    value = input_elem.get("value")
-                    data[name] = value
+        return is_succeed, problem_id_list, contest_id
 
-            del data["contest[teams][]"]
-            del data["contest[teamCategories][]"]
+    def get_contest_problem_count(self, contest):
+        contest_id = self.get_contest_id(contests=contest)
 
-            data.update(problem_data)
-            data["contest[save]"]: ""
+        page = self.session.get(self.url + ConTestPath.EDIT.format(contest_id))
+        soup = BeautifulSoup(page.text, "html.parser")
+        thead_elements = soup.select(".table thead")
 
-            page = self.session.post(
-                self.url + f"jury/contests/{contest}/edit", data=data
-            )
+        tbody = ""
+        for thead in thead_elements:
+            tbody = thead.find_next_sibling("tbody")
 
-            soup = BeautifulSoup(page.text, "html.parser")
-            error_elements = soup.select_one(".form-error-message")
+        if tbody:
+            tr_elements_length = len(tbody.select("tr"))
 
-            if error_elements:
-                response = False
+            return tr_elements_length
+
+    def contest_problem_upload(self, contest, problem_data):
+        contest_id = self.get_contest_id(contests=contest)
+        page = self.session.get(self.url + ConTestPath.EDIT.format(contest_id))
+
+        soup = BeautifulSoup(page.text, "html.parser")
+        input_elements = soup.find_all("input")
+        select_elements = soup.find_all("select")
+        radio_elements = soup.find_all("div", class_="custom-control custom-radio")
+
+        contest_problem_info_dict = dict()
+        for input_elem in input_elements:
+            if input_elem.get("name"):
+                contest_problem_info_dict[input_elem.get("name")] = input_elem.get(
+                    "value", ""
+                )
+
+        for select_elem in select_elements:
+            if select_elem.get("name"):
+                selected_option = select_elem.find("option", selected=True)
+                selected_value = selected_option.get("value") if selected_option else ""
+                contest_problem_info_dict[select_elem.get("name")] = selected_value
+
+        for radio_elem in radio_elements:
+            input_elem = radio_elem.find("input", checked=True)
+            if input_elem:
+                name = input_elem.get("name")
+                value = input_elem.get("value")
+                contest_problem_info_dict[name] = value
+
+        del contest_problem_info_dict["contest[teams][]"]
+        del contest_problem_info_dict["contest[teamCategories][]"]
+
+        contest_problem_info_dict.update(problem_data)
+        contest_problem_info_dict["contest[save]"]: ""
+
+        page = self.session.post(
+            self.url + ConTestPath.EDIT.format(contest_id),
+            data=contest_problem_info_dict,
+        )
+
+        soup = BeautifulSoup(page.text, "html.parser")
+        error_elements = soup.select_one(".form-error-message")
+
+        return error_elements
+
+    def get_contests_all(self):
+        url = self.url + "api/v4/contests?strict=false"
+
+        response = requests.get(url)
+        data = response.json()
+
+        return data
+
+    def get_testcases_all(self, problem_id):
+        page = self.session.get(self.url + TestCasePath.format(problem_id))
+        soup = BeautifulSoup(page.text, "html.parser")
+        rows = soup.select("table tr")
+
+        testcases_dict = {}
+
+        for row in range(1, len(rows)):
+            href = rows[row].select("td")[0].select_one("a").get("href")
+            if "delete_testcase" in href:
+                id = href.split("/")[3]
+
+            row_id = rows[row].select(".testrank")
+            md5 = rows[row].select(".md5")
+
+            file_md5 = md5[0].text.replace("\n", "").replace(" ", "")
+
+            if row_id:
+                file_id = row_id[0].text.replace("\n", "").replace(" ", "")
+                left_md5 = file_md5
             else:
-                response = True
+                info = {"id": id, "file_id": file_id}
 
-            return response
+                testcase = TestCase(**info)
+                file_md5 = left_md5 + file_md5
+                testcases_dict[file_md5] = testcase
 
-    def request_contests_get_all(self):
-        if self.session:
-            url = self.url + "api/v4/contests?strict=false"
-            # 發送 GET 請求
-            response = requests.get(url)
-            data = response.json()  # 將返回的 JSON 資料轉換為 Python 字典或列表
+        return testcases_dict
 
-            return data
+    def get_testcase(self, problem_id, testcase_id):
+        testcases = {}
+        page = self.session.get(
+            self.url + TestCasePath.GET_INPUT.format(problem_id, testcase_id)
+        )
+        soup = BeautifulSoup(page.text, "html.parser")
+        testcases["in"] = soup.text
 
-    def request_testcases_get_all(self, problem_id):
-        if self.session:
-            page = self.session.get(self.url + f"jury/problems/{problem_id}/testcases")
-            soup = BeautifulSoup(page.text, "html.parser")
-            rows = soup.select("table tr")
+        page = self.session.get(
+            self.url + TestCasePath.GET_OUTPUT.format(problem_id, testcase_id)
+        )
+        soup = BeautifulSoup(page.text, "html.parser")
+        testcases["out"] = soup.text
 
-            testcases_dict = {}
+        return testcases
 
-            for row in range(1, len(rows)):
-                href = rows[row].select("td")[0].select_one("a").get("href")
-                if "delete_testcase" in href:
-                    id = href.split("/")[3]
+    def update_testcase(self, form_data, id):
+        self.session.get(self.url + TestCasePath.GET.format(id))
+        self.session.post(self.url + TestCasePath.GET.format(id), files=form_data)
 
-                row_id = rows[row].select(".testrank")
-                name = rows[row].select(".filename")
-                md5 = rows[row].select(".md5")
+    def update_problem_information(self, data, files, id):
+        self.session.get(self.url + ProblemPath.EDIT.format(id))
+        self.session.post(
+            self.url + ProblemPath.EDIT.format(id), data=data, files=files
+        )
 
-                file_md5 = md5[0].text.replace("\n", "").replace(" ", "")
-                file_name = name[0].text.replace("\n", "").replace(" ", "")
+    def delete_testcase(self, id):
+        self.session.get(self.url + TestCasePath.DELETE.format(id))
 
-                if row_id:
-                    file_id = row_id[0].text.replace("\n", "").replace(" ", "")
-                    left_md5 = file_md5
-                else:
-                    info = {"id": id, "file_id": file_id}
-
-                    testcase = TestCase(**info)
-                    file_md5 = left_md5 + file_md5
-                    testcases_dict[file_md5] = testcase
-
-            return testcases_dict
-
-    def request_testcase_get(self, problem_id, testcase_id):
-        if self.session:
-            testcases = {}
-            page = self.session.get(
-                self.url
-                + f"jury/problems/{problem_id}/testcases/{testcase_id}/fetch/input"
-            )
-            soup = BeautifulSoup(page.text, "html.parser")
-            testcases["in"] = soup.text
-
-            page = self.session.get(
-                self.url
-                + f"jury/problems/{problem_id}/testcases/{testcase_id}/fetch/output"
-            )
-            soup = BeautifulSoup(page.text, "html.parser")
-            testcases["out"] = soup.text
-
-            return testcases
-
-    def request_update(self, form_data, id):
-        if self.session:
-            page = self.session.get(self.url + f"jury/problems/{id}/testcases")
-            page = self.session.post(
-                self.url + f"jury/problems/{id}/testcases", files=form_data
-            )
-
-    def request_problem_info_update(self, data, files, id):
-        if self.session:
-            page = self.session.get(self.url + f"jury/problems/{id}/edit")
-
-            page = self.session.post(
-                self.url + f"jury/problems/{id}/edit", data=data, files=files
-            )
-
-    def request_testcase_delete(self, id):
-        if self.session:
-            page = self.session.get(self.url + f"jury/problems/{id}/delete_testcase")
-
-    def request_problem_delete(self, id):
-        if self.session:
-            page = self.session.post(self.url + f"jury/problems/{id}/delete")
+    def delete_problem(self, id):
+        self.session.post(self.url + ProblemPath.DELETE.format(id))

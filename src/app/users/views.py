@@ -9,7 +9,8 @@ def register(request):
     if form.is_valid():
         user = form.save()  # Group add should save user first.
         user.is_staff = True  # Can login to admin site.
-        user.groups.add(Group.objects.get(name="teacher"))
+        teacher_group, _ = Group.objects.get_or_create(name="teacher")
+        user.groups.add(teacher_group)
         user.save()
         return redirect("admin:index")
 

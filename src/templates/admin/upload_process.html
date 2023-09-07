@@ -35,7 +35,9 @@
 
         <div class="card-body">
             <div id="content-main">
+            {% if process %}
               <p>已有上傳過的題目，確定繼續執行上傳動作？</p>
+            {% endif %}
                     <div class="row">
                         <div class="col-12 col-sm-9">
                             <h4>題目</h4>
@@ -62,7 +64,7 @@
 
                                 <div class="form-group">
                                   <select name="domserver" class="form-select w-100 p-2 rounded" aria-label="Default select example">
-                                    {% for name in domserver %}
+                                    {% for name in domserver_name_list %}
                                       <option value="{{ name }}">{{ name }}</option>
                                     {% endfor %}
                                   </select>

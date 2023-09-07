@@ -1,5 +1,3 @@
-import hashlib
-
 from django.contrib import admin
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -8,10 +6,10 @@ from django_object_actions import DjangoObjectActions, action
 from pydantic import BaseModel
 
 from app.domservers.models import DomServerClient
+from src.utils.admins import testcase_md5, server_clients_all_information
 
 from .crawler import ProblemCrawler
-from .models import DomServer, Problem, ProblemInOut
-from django.contrib.auth.hashers import make_password, check_password
+from .models import Problem, ProblemInOut, ProblemServerLog
 
 
 class ProblemTestCase(BaseModel):
@@ -25,7 +23,7 @@ class ProblemInOutInline(admin.TabularInline):
     extra = 1
 
 
-@admin.register(DomServer)
+@admin.register(ProblemServerLog)
 class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
     pass
 
@@ -44,12 +42,12 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_filter = ("create_at", "update_at")
     search_fields = ("name", "short_name")
     inlines = [ProblemInOutInline]
-    readonly_fields = ("id", "owner", "inout_illustrate")
+    readonly_fields = ("id", "owner", "update_illustrate")
     fieldsets = (
         (
             None,
             {
-                "fields": ("id", "owner", "inout_illustrate"),
+                "fields": ("id", "owner", "update_illustrate"),
             },
         ),
         (
@@ -66,11 +64,15 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     )
     ordering = ("short_name", "name", "id")
     list_select_related = ("owner",)
-    actions = ["upload_selected", "updown_selected"]
-    change_actions = ("problem_inout_new_data", "problem_info_new_data")
+    actions = [
+        "upload_selected_problem",
+        "updown_selected_problem",
+        "updown_selected_contest",
+    ]
+    change_actions = ("update_problem_testcase", "update_problem_information")
 
-    @admin.display(description="測資更新說明")
-    def inout_illustrate(self, *args, **kwargs):
+    @admin.display(description="更新說明")
+    def update_illustrate(self, *args, **kwargs):
         return mark_safe(
             f"""
                 若是想新增、修改、刪除測試資料或者題目資訊請在操作完後按下 “儲存並繼續編輯”，
@@ -79,81 +81,91 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         )
 
     @action(label="更新測資", description="update inout")
-    def problem_inout_new_data(self, request, obj):
-        problem_inout = obj.int_out_data.all()
-        domserver = obj.domserver.all()
+    def update_problem_testcase(self, request, testcase_obj):
+        problem_testcase_obj_all = testcase_obj.int_out_data.all()
+        problem_log_obj_all = testcase_obj.problem_log.all()
 
-        for object in domserver:
-            domclient = DomServerClient.objects.filter(name=object.server_name)
+        for problem_log_obj in problem_log_obj_all:
+            server_client = problem_log_obj.server_client
 
-            url = domclient[0].host
-            username = domclient[0].username
-            password = domclient[0].mask_password
+            url = server_client.host
+            username = server_client.username
+            password = server_client.mask_password
 
             problem_crawler = ProblemCrawler(url, username, password)
-            testcases_dict = problem_crawler.request_testcases_get_all(
-                problem_id=object.problem_web_id
+            web_testcases_all_dict = problem_crawler.get_testcases_all(
+                problem_id=problem_log_obj.web_problem_id
             )
-            problems_dict = {}
 
-            for obj in problem_inout:
-                problem_md5 = self.md5_hash(obj.input_content) + self.md5_hash(
-                    obj.answer_content
-                )
+            problems_dict = dict()
+            for testcase_obj in problem_testcase_obj_all:
+                problem_testcase_md5 = testcase_md5(
+                    testcase_obj.input_content
+                ) + testcase_md5(testcase_obj.answer_content)
 
-                info = {"input": obj.input_content, "out": obj.answer_content}
+                problem_testcase_info = {
+                    "input": testcase_obj.input_content,
+                    "out": testcase_obj.answer_content,
+                }
 
-                problem_testcase = ProblemTestCase(**info)
-                problems_dict[problem_md5] = problem_testcase
+                problem_testcase = ProblemTestCase(**problem_testcase_info)
+                problems_dict[problem_testcase_md5] = problem_testcase
 
-            testcases_md5 = set(testcases_dict.keys())
-            problems_md5 = set(problems_dict.keys())
+            web_testcases_md5 = set(web_testcases_all_dict.keys())
+            problems_testcases_md5 = set(problems_dict.keys())
 
-            problems_difference = problems_md5.difference(testcases_md5)
-            testcases_difference = testcases_md5.difference(problems_md5)
+            problems_testcases_difference = problems_testcases_md5.difference(
+                web_testcases_md5
+            )
+            web_testcases_difference = web_testcases_md5.difference(
+                problems_testcases_md5
+            )
 
-            for md5 in testcases_difference:
-                id = testcases_dict[md5].id
-                problem_crawler.request_testcase_delete(id=id)
+            for web_md5 in web_testcases_difference:
+                web_testcase_id = web_testcases_all_dict[web_md5].id
+                problem_crawler.delete_testcase(id=web_testcase_id)
 
-            for md5 in problems_difference:
+            for problem_md5 in problems_testcases_difference:
                 testcase_in, testcase_out = (
-                    problems_dict[md5].input,
-                    problems_dict[md5].out,
+                    problems_dict[problem_md5].input,
+                    problems_dict[problem_md5].out,
                 )
 
-                form_data = {}
-                form_data["add_input"] = ("add.in", testcase_in)
-                form_data["add_output"] = ("add.out", testcase_out)
-
-                problem_crawler.request_update(
-                    form_data=form_data, id=object.problem_web_id
+                problem_testcase_info_data = {
+                    "add_input": ("add.in", testcase_in),
+                    "add_output": ("add.out", testcase_out),
+                }
+                problem_crawler.update_testcase(
+                    form_data=problem_testcase_info_data,
+                    id=problem_log_obj.web_problem_id,
                 )
 
-    @action(label="更新題目資訊", description="update problem info")
-    def problem_info_new_data(self, request, obj):
-        name = obj.name
-        time_limit = obj.time_limit
+    @action(label="更新題目資訊")
+    def update_problem_information(self, request, obj):
+        problem_name = obj.name
+        problem_time_limit = obj.time_limit
 
-        data = {}
-        data["problem[name]"] = name
-        data["problem[timelimit]"] = time_limit
+        problem_info_data = {
+            "problem[name]": problem_name,
+            "problem[timelimit]": problem_time_limit,
+        }
 
-        files = {}
-        files["problem[problemtextFile]"] = obj.description_file
+        problem_files = {"problem[problemtextFile]": obj.description_file}
 
-        domserver = obj.domserver.all()
+        problem_log_obj_all = obj.problem_log.all()
 
-        for object in domserver:
-            domclient = DomServerClient.objects.filter(name=object.server_name)
+        for problem_log_obj in problem_log_obj_all:
+            server_client = problem_log_obj.server_client
 
-            url = domclient[0].host
-            username = domclient[0].username
-            password = domclient[0].mask_password
+            url = server_client.host
+            username = server_client.username
+            password = server_client.mask_password
 
             problem_crawler = ProblemCrawler(url, username, password)
-            problem_crawler.request_problem_info_update(
-                data=data, files=files, id=object.problem_web_id
+            problem_crawler.update_problem_information(
+                data=problem_info_data,
+                files=problem_files,
+                id=problem_log_obj.web_problem_id,
             )
 
     def get_queryset(self, request):
@@ -168,56 +180,52 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     make_zip.short_description = "下載壓縮檔"  # type: ignore
 
-    def md5_hash(self, testcase):
-        encoded_string = testcase.encode("utf-8")
-        md5_hash = hashlib.md5(encoded_string).hexdigest()
-
-        return md5_hash
-
     def save_model(self, request, obj, form, change):
         if not obj.owner_id:
             obj.owner = request.user
 
         super().save_model(request, obj, form, change)
 
-    def upload_selected(self, request, queryset):
+    def upload_selected_problem(self, request, queryset):
         domserver_dict = {}
         domserver_accout = {}
-        for object in DomServerClient.objects.all():
+        for server_object in DomServerClient.objects.all():
 
-            domserver_dict[object.name] = object.host
-            domserver_accout[object.name] = {
-                "username": object.username,
-                "password": object.mask_password,
+            domserver_dict[server_object.name] = server_object.host
+            domserver_accout[server_object.name] = {
+                "username": server_object.username,
+                "password": server_object.mask_password,
             }
 
-        domserver_keys = [key for key in domserver_dict.keys()]
-        update_problem_name = {}
+        domserver_name_list = [key for key in domserver_dict.keys()]
+        update_problem_name = dict()
         process = False
         for query in queryset:
 
             if query.is_processed:
                 process = True
-                used_server_list = []
+                problem_server_contest_info = []
 
-                for object in query.domserver.all():
-                    used_server_list.append(
-                        f"{object.server_name}({object.problem_web_contest})"
+                for problem_log_object in query.problem_log.all():
+                    problem_server_contest_info.append(
+                        f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
                     )
 
-                if used_server_list:
-                    update_problem_name[query.name] = ", ".join((used_server_list))
+                if problem_server_contest_info:
+                    update_problem_name[query.name] = ", ".join(
+                        problem_server_contest_info
+                    )
 
         field_name = ""
-        if domserver_keys:
-            host = domserver_dict[domserver_keys[0]]
-            username = domserver_accout[domserver_keys[0]].get("username")
-            password = domserver_accout[domserver_keys[0]].get("password")
+        if domserver_name_list:
+            host = domserver_dict[domserver_name_list[0]]
+            username = domserver_accout[domserver_name_list[0]].get("username")
+            password = domserver_accout[domserver_name_list[0]].get("password")
 
             problem_crawler = ProblemCrawler(
                 url=host, username=username, password=password
             )
-            data = problem_crawler.request_contests_get_all()
+            data = problem_crawler.get_contests_all()
 
             field_name = [field["formal_name"] for field in data]
 
@@ -228,39 +236,33 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             "process": process,
             "upload_objects": upload_objects,
             "update_problem_name": update_problem_name,
-            "domserver": domserver_keys,
+            "domserver_name_list": domserver_name_list,
             "domserver_dict": domserver_dict,
             "field_name": field_name,
         }
 
         return render(request, "admin/upload_process.html", context)
 
-    upload_selected.short_description = "上傳所選的 題目"
+    upload_selected_problem.short_description = "上傳所選的 題目"
 
-    def updown_selected(self, request, queryset):
-        domclients = DomServerClient.objects.all()
-        domclients_info = {}
+    def updown_selected_problem(self, request, queryset):
+        server_clients_information = server_clients_all_information()
 
-        for domclient in domclients:
-            domclients_info[domclient.name] = {
-                "host": domclient.host,
-                "username": domclient.username,
-                "password": domclient.mask_password,
-            }
+        for problem_obj in queryset:
+            problem_obj.is_processed = False
 
-        for query in queryset:
-            query.is_processed = False
+            problem_log_del_dict = dict()
+            problem_log_obj_all = problem_obj.problem_log.all()
+            for problem_log_obj in problem_log_obj_all:
+                if problem_log_obj.server_client not in problem_log_del_dict:
+                    problem_log_del_dict[
+                        problem_log_obj.server_client
+                    ] = problem_log_obj.web_problem_id
 
-            problem_del = {}
-            problem_domserver = query.domserver.all()
-            for server in problem_domserver:
-                if server.server_name not in problem_del:
-                    problem_del[server.server_name] = server.problem_web_id
-
-            for key, value in problem_del.items():
-                host = domclients_info[key].get("host")
-                username = domclients_info[key].get("username")
-                password = domclients_info[key].get("password")
+            for client, web_problem_id in problem_log_del_dict.items():
+                host = server_clients_information[client.name].get("host")
+                username = server_clients_information[client.name].get("username")
+                password = server_clients_information[client.name].get("password")
 
                 problem_crawler = ProblemCrawler(
                     url=host,
@@ -268,8 +270,32 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                     password=password,
                 )
 
-                problem_crawler.request_problem_delete(id=value)
-
+                problem_crawler.delete_problem(id=web_problem_id)
+            problem_log_obj_all.delete()
         Problem.objects.bulk_update(queryset, ["is_processed"])
 
-    updown_selected.short_description = "撤銷所選的 題目"
+    updown_selected_problem.short_description = "撤銷所選的 題目"
+
+    def updown_selected_contest(self, request, queryset):
+        domclients_info = server_clients_all_information()
+        queryset_list = []
+
+        for query in queryset:
+            problem_contests_info = query.domserver.all()
+            for contest in problem_contests_info:
+                if "contest_set" in domclients_info[contest.server_name]:
+                    domclients_info[contest.server_name]["contest_set"].add(
+                        contest.problem_web_contest
+                    )
+                else:
+                    domclients_info[contest.server_name]["contest_set"] = set()
+                    domclients_info[contest.server_name]["contest_set"].add(
+                        contest.problem_web_contest
+                    )
+
+        print(domclients_info)
+        context = {}
+
+        # return render(request, "admin/updown_process.html", context)
+
+    updown_selected_contest.short_description = "撤銷所選的 考區"

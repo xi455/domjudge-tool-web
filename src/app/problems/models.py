@@ -2,6 +2,7 @@ from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator
 from django.db import models
 
+from app.domservers.models import DomServerClient
 from utils.models import BaseModel
 
 
@@ -26,10 +27,7 @@ class Problem(BaseModel):
         related_name="problems",
         verbose_name="擁有者",
     )
-    # problem_text_id = models.CharField("題目ID", max_length=10, blank=True)
     is_processed = models.BooleanField("是否上傳", default=False)
-    # domserver_info = models.CharField("已上傳的 domserver", max_length=128, blank=True)
-    # is_latest_inout = models.BooleanField("最新測資", default=False)
 
     def delete(self, using=None, keep_parents=False):
         pdf_path = self.description_file.path
@@ -84,13 +82,19 @@ class ProblemInOut(models.Model):
         verbose_name_plural = "題目輸入輸出"
 
 
-class DomServer(models.Model):
+class ProblemServerLog(models.Model):
     problem = models.ForeignKey(
         Problem,
         on_delete=models.CASCADE,
-        related_name="domserver",
+        related_name="problem_log",
     )
-    server_name = models.CharField("Server 名稱", max_length=68)
-    problem_web_id = models.CharField("網站題目ID", max_length=68)
-    problem_shortname = models.CharField("網站題目代號", max_length=68)
-    problem_web_contest = models.CharField("網站比賽區號", max_length=68)
+    server_client = models.ForeignKey(
+        DomServerClient,
+        on_delete=models.CASCADE,
+    )
+    web_problem_id = models.CharField("網站題目ID", max_length=68)
+    web_problem_shortname = models.CharField("網站題目代號", max_length=68)
+    web_problem_contest = models.CharField("網站比賽區號", max_length=68)
+
+    def __str__(self):
+        return f"{self.problem}"

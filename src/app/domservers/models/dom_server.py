@@ -2,6 +2,7 @@ from functools import cached_property
 
 from django.core.signing import Signer
 from django.db import models
+from django_cryptography.fields import encrypt
 
 from utils.models import BaseModel
 
@@ -24,16 +25,6 @@ class DomServerClient(BaseModel):
     )
     disable_ssl = models.BooleanField(default=False)
     timeout = models.BooleanField(default=False)
-    # max_connections = models.IntegerField(
-    #     default=0,
-    #     verbose_name="最大連接數",
-    #     help_text="請輸入最大連接數量",
-    # )
-    # max_keepalive_connections = models.IntegerField(
-    #     default=0,
-    #     verbose_name="最大保持連接數",
-    #     help_text="請輸入最大保持連接數量",
-    # )
     category_id = models.BigIntegerField(
         default=0,
         verbose_name="類型ID",
