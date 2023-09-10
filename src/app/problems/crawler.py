@@ -13,28 +13,34 @@ class TestCase(BaseModel):
     file_id: str
 
 
+class ServerContest(BaseModel):
+    conteset_name: str
+    conteset_id: str
+
+
 class HomePath(str, Enum):
     LOGIN = "/login"
     JURY = "/jury"
 
 
 class ProblemPath(str, Enum):
-    GET = "jury/problems"
-    ADD = "jury/problems"
-    EDIT = "jury/problems/{}/edit"
-    DELETE = "jury/problems/{}/delete"
+    GET = "/jury/problems"
+    ADD = "/jury/problems"
+    EDIT = "/jury/problems/{}/edit"
+    DELETE = "/jury/problems/{}/delete"
 
 
 class ConTestPath(str, Enum):
-    GET = "jury/problems"
-    EDIT = "jury/contests/{}/edit"
+    GET = "/jury/contests"
+    EDIT = "/jury/contests/{}/edit"
+    DELETE = "/jury/contests/{}/problems/{}/delete"
 
 
 class TestCasePath(str, Enum):
-    GET = "jury/problems/{}/testcases"
-    GET_INPUT = "jury/problems/{}/testcases/{}/fetch/input"
-    GET_OUTPUT = "jury/problems/{}/testcases/{}/fetch/output"
-    DELETE = "jury/problems/{}/delete_testcase"
+    GET = "/jury/problems/{}/testcases"
+    GET_INPUT = "/jury/problems/{}/testcases/{}/fetch/input"
+    GET_OUTPUT = "/jury/problems/{}/testcases/{}/fetch/output"
+    DELETE = "/jury/problems/{}/delete_testcase"
 
 
 class ProblemCrawler:
@@ -65,21 +71,29 @@ class ProblemCrawler:
 
         raise exceptions.ProblemDownloaderLoginException("登入失敗")
 
-    def get_contest_id(self, contests):
+    def get_contest_name(self, contests_id):
         page = self.session.get(self.url + ConTestPath.GET)
         soup = BeautifulSoup(page.text, "html.parser")
 
-        contest_options = soup.select("option")
-        if contests != "":
-            for index in range(1, len(contest_options)):
-                option = contest_options[index].text.split(" - ")[-1]
+        table_elements = soup.select(
+            "table",
+            {
+                "class": "data-table table table-sm table-striped dataTable no-footer",
+                "id": "DataTables_Table_0",
+            },
+        )
 
-                if option == contests:
-                    contest_id = contest_options[index].get("value")
-                    return contest_id
+        tr_elements = table_elements[-1].select("tbody tr")
 
-    def upload_problem(self, files, contests):
-        contest_id = self.get_contest_id(contests)
+        for tr in tr_elements:
+            td_elements = tr.select("td")
+            web_contest_id = td_elements[0].text.strip()
+            if web_contest_id == contests_id:
+                web_contest_name = td_elements[1].text.strip()
+        
+                return web_contest_name
+
+    def upload_problem(self, files, contest_id):
 
         data = {
             "problem_upload_multiple[contest]": contest_id,
@@ -114,9 +128,7 @@ class ProblemCrawler:
 
         return is_succeed, problem_id_list, contest_id
 
-    def get_contest_problem_count(self, contest):
-        contest_id = self.get_contest_id(contests=contest)
-
+    def get_contest_problem_count(self, contest_id):
         page = self.session.get(self.url + ConTestPath.EDIT.format(contest_id))
         soup = BeautifulSoup(page.text, "html.parser")
         thead_elements = soup.select(".table thead")
@@ -130,8 +142,36 @@ class ProblemCrawler:
 
             return tr_elements_length
 
-    def contest_problem_upload(self, contest, problem_data):
-        contest_id = self.get_contest_id(contests=contest)
+    def get_contests_list_all(self):
+        page = self.session.get(self.url + ConTestPath.GET)
+        soup = BeautifulSoup(page.text, "html.parser")
+
+        table_elements = soup.select(
+            "table",
+            {
+                "class": "data-table table table-sm table-striped dataTable no-footer",
+                "id": "DataTables_Table_0",
+            },
+        )
+        tr_elements = table_elements[-1].select("tbody tr")
+
+        server_contests_info_dict = dict()
+        for tr in tr_elements:
+            td_elements = tr.select("td")
+            web_contest_id = td_elements[0].text.strip()
+            web_contest_name = td_elements[1].text.strip()
+
+            contest_info = {
+                "conteset_name": web_contest_name,
+                "conteset_id": web_contest_id,
+            }
+
+            server_contest = ServerContest(**contest_info)
+            server_contests_info_dict[web_contest_name] = server_contest
+
+        return server_contests_info_dict
+
+    def contest_problem_upload(self, contest_id, problem_data):
         page = self.session.get(self.url + ConTestPath.EDIT.format(contest_id))
 
         soup = BeautifulSoup(page.text, "html.parser")
@@ -175,16 +215,8 @@ class ProblemCrawler:
 
         return error_elements
 
-    def get_contests_all(self):
-        url = self.url + "api/v4/contests?strict=false"
-
-        response = requests.get(url)
-        data = response.json()
-
-        return data
-
     def get_testcases_all(self, problem_id):
-        page = self.session.get(self.url + TestCasePath.format(problem_id))
+        page = self.session.get(self.url + TestCasePath.GET.format(problem_id))
         soup = BeautifulSoup(page.text, "html.parser")
         rows = soup.select("table tr")
 
@@ -230,16 +262,35 @@ class ProblemCrawler:
 
     def update_testcase(self, form_data, id):
         self.session.get(self.url + TestCasePath.GET.format(id))
-        self.session.post(self.url + TestCasePath.GET.format(id), files=form_data)
+        page = self.session.post(
+            self.url + TestCasePath.GET.format(id), files=form_data
+        )
+
+        if page.status_code == 200:
+            return True
 
     def update_problem_information(self, data, files, id):
         self.session.get(self.url + ProblemPath.EDIT.format(id))
-        self.session.post(
+
+        page = self.session.post(
             self.url + ProblemPath.EDIT.format(id), data=data, files=files
         )
-
-    def delete_testcase(self, id):
-        self.session.get(self.url + TestCasePath.DELETE.format(id))
+        if page.status_code == 200:
+            return True
 
     def delete_problem(self, id):
         self.session.post(self.url + ProblemPath.DELETE.format(id))
+
+    def delete_contest_problem(self, contest_id, web_problem_id):
+        page = self.session.post(
+            self.url + ConTestPath.DELETE.format(contest_id, web_problem_id)
+        )
+
+        is_success = True
+        if page.status_code == 404:
+            is_success = False
+
+        return is_success
+
+    def delete_testcase(self, id):
+        self.session.get(self.url + TestCasePath.DELETE.format(id))

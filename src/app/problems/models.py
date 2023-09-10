@@ -28,6 +28,7 @@ class Problem(BaseModel):
         verbose_name="擁有者",
     )
     is_processed = models.BooleanField("是否上傳", default=False)
+    web_problem_id = models.CharField("網站題目ID", max_length=68, blank=True, null=True)
 
     def delete(self, using=None, keep_parents=False):
         pdf_path = self.description_file.path
@@ -92,8 +93,8 @@ class ProblemServerLog(models.Model):
         DomServerClient,
         on_delete=models.CASCADE,
     )
+    # web_problem_shortname = models.CharField("網站題目代號", max_length=68)
     web_problem_id = models.CharField("網站題目ID", max_length=68)
-    web_problem_shortname = models.CharField("網站題目代號", max_length=68)
     web_problem_contest = models.CharField("網站比賽區號", max_length=68)
 
     def __str__(self):

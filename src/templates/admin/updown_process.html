@@ -1,10 +1,142 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb float-sm-right">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
+</ol>
+{% endblock %}
+
+{% block content_title %}
+撤銷
+{% endblock %}
+{% block content %}
+
+<div class="col-12">
+      <div class="card card-primary card-outline">
+      <div class="card-header with-border">
+          <h4 class="card-title">
+              撤銷
+          </h4>
+      </div>
+
+        <div class="card-body">
+            <div id="content-main">
+
+                    <div class="row">
+                        <div class="col-12 col-sm-9">
+                            <h4>題目</h4>
+                            <ol>{{ updown_objects|unordered_list }}</ol>
+                        </div>
+
+                          <div class="col-12 col-sm-9">
+                            <h4>要撤選題目</h4>
+                            <ol>
+                                {% for key, value in update_problem_name.items %}
+                                  <li>{{ key }}:</li>
+                                  <p>已上傳的伺服器: {{ value }}</p>
+                                {% endfor %}
+                            </ol>
+                          </div>
+
+                        <div class="col-12 col-sm-3 mt-auto">
+                            <form action="{% url 'problem_contest_updown' %}" method="post">{% csrf_token %}
+                                {% for obj in updown_objects %}
+                                    <input type="hidden" name="updown_objects_id" value="{{ obj.id }}">
+                                {% endfor %}
+
+                                <div class="form-group">
+                                  <select name="domserver" class="form-select w-100 p-2 rounded" aria-label="Default select example">
+                                    {% for name in domserver_name_list %}
+                                      <option value="{{ name }}">{{ name }}</option>
+                                    {% endfor %}
+                                  </select>
+                                </div>
+
+                                <div class="form-group">
+                                  <select name="contests" class="form-select w-100 p-2 rounded" aria-label="Default select example">
+                                    {% for name, id in field_name %}
+                                      <option value="{{ id }}">{{ name }}</option>
+                                    {% endfor %}
+                                  </select>
+                                </div>
+                                {% if process %}
+                                  <div class="form-group">
+                                    <input type="submit" class="btn {{ jazzmin_ui.button_classes.danger }} form-control" value="{% trans "Yes, I'm sure" %}">
+                                  </div>
+                                  <div class="form-group">
+                                    <input type="button" onclick="back()"
+                                            class="btn {{ jazzmin_ui.button_classes.danger }} cancel-link form-control" value="{% trans "No, take me back" %}">
+                                  </div>
+                                {% else %}
+                                <div class="form-group">
+                                  <input type="submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control" value="{% trans "Yes, I'm sure" %}">
+                                </div>
+                                <div class="form-group">
+                                  <input type="button" onclick="back()"
+                                          class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control" value="{% trans "No, take me back" %}">
+                                </div>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+  <script>
+  function back(){
+    window.history.back()
+  }
+
+  const domserverSelect = document.querySelector('[name="domserver"]');
+  const contestsSelect = document.querySelector('[name="contests"]');
+  const contentHeader = document.querySelector('.content-header');
+  const csrfToken = "{{ csrf_token }}";
+
+  domserverSelect.addEventListener('change', function() {
+
+    contestsSelect.innerHTML = ""
+    const selected_dict = {
+      "name": domserverSelect.value
+    }
+
+    fetch("/contests_list/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+    },
+      body: JSON.stringify(selected_dict)
+    }
+    )
+      .then(response => response.json())
+      .then(data => {
+          for(key in data){
+            contestsSelect.innerHTML += `<option value="${data[key]}">${key}</option>;`
+          }
+      })
+
+    .catch(error => {
+      console.error('Error:', error);
+        contentHeader.innerHTML += `
+        <div class="alert alert-danger" role="alert">
+          考試選擇區域讀取錯誤！！
+        </div>
+        `
+    });
+  });
+
+</script>
+
+{% endblock %}

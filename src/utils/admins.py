@@ -1,6 +1,7 @@
 import hashlib
 
 from app.domservers.models import DomServerClient
+from app.problems.crawler import ProblemCrawler
 
 
 def action_display(
@@ -44,3 +45,12 @@ def server_clients_all_information():
         }
 
     return server_clients_information
+
+
+def create_problem_crawler(server_client):
+
+    url = server_client.host
+    username = server_client.username
+    password = server_client.mask_password
+
+    return ProblemCrawler(url, username, password)

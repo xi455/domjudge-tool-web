@@ -46,7 +46,7 @@
 
                         {% if process %}
                           <div class="col-12 col-sm-9">
-                            <h4>已上傳題目</h4>
+                            <h4>已上傳考區範圍</h4>
                             <ol>
                                 {% for key, value in update_problem_name.items %}
                                   <li>{{ key }}:</li>
@@ -59,12 +59,12 @@
                         <div class="col-12 col-sm-3 mt-auto">
                             <form action="{% url 'problem_upload' %}" method="post">{% csrf_token %}
                                 {% for obj in upload_objects %}
-                                    <input type="hidden" name="upload_objects" value="{{ obj.id }}">
+                                    <input type="hidden" name="upload_objects_id" value="{{ obj.id }}">
                                 {% endfor %}
 
                                 <div class="form-group">
                                   <select name="domserver" class="form-select w-100 p-2 rounded" aria-label="Default select example">
-                                    {% for name in domserver_name_list %}
+                                    {% for name in dom_server_name %}
                                       <option value="{{ name }}">{{ name }}</option>
                                     {% endfor %}
                                   </select>
@@ -72,8 +72,8 @@
 
                                 <div class="form-group">
                                   <select name="contests" class="form-select w-100 p-2 rounded" aria-label="Default select example">
-                                    {% for name in field_name %}
-                                      <option value="{{ name }}">{{ name }}</option>
+                                    {% for name, value in contest_name %}
+                                      <option value="{{ value }}">{{ name }}</option>
                                     {% endfor %}
                                   </select>
                                 </div>
@@ -110,23 +110,33 @@
   const domserverSelect = document.querySelector('[name="domserver"]');
   const contestsSelect = document.querySelector('[name="contests"]');
   const contentHeader = document.querySelector('.content-header');
+  const csrfToken = "{{ csrf_token }}";
 
   domserverSelect.addEventListener('change', function() {
 
     contestsSelect.innerHTML = ""
-    const selectedValue = domserverSelect.value;
-    let domserver = {{ domserver_dict|safe }}
-    let serverUrl = domserver[selectedValue]
+    const selected_dict = {
+      "name": domserverSelect.value
+    }
 
-    fetch(serverUrl + "api/v4/contests?strict=false")
-    .then(response => response.json())
-    .then(data => {
-      data.map(data => {
-        contestsSelect.innerHTML += `<option value="${data.formal_name}">${data.formal_name}</option>;`
+    fetch("/contests_list/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+    },
+      body: JSON.stringify(selected_dict)
+    }
+    )
+      .then(response => response.json())
+      .then(data => {
+          for(key in data){
+            contestsSelect.innerHTML += `<option value="${data[key]}">${key}</option>;`
+          }
       })
-    })
+
     .catch(error => {
-      {#console.error('Error:', error);#}
+      console.error('Error:', error);
         contentHeader.innerHTML += `
         <div class="alert alert-danger" role="alert">
           考試選擇區域讀取錯誤！！
@@ -138,5 +148,3 @@
 </script>
 
 {% endblock %}
-
-

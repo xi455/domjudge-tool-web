@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
@@ -6,7 +6,11 @@ from django_object_actions import DjangoObjectActions, action
 from pydantic import BaseModel
 
 from app.domservers.models import DomServerClient
-from src.utils.admins import testcase_md5, server_clients_all_information
+from src.utils.admins import (
+    create_problem_crawler,
+    server_clients_all_information,
+    testcase_md5,
+)
 
 from .crawler import ProblemCrawler
 from .models import Problem, ProblemInOut, ProblemServerLog
@@ -58,6 +62,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                     "short_name",
                     "description_file",
                     "time_limit",
+                    "web_problem_id",
                 ),
             },
         ),
@@ -81,18 +86,15 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         )
 
     @action(label="更新測資", description="update inout")
-    def update_problem_testcase(self, request, testcase_obj):
-        problem_testcase_obj_all = testcase_obj.int_out_data.all()
-        problem_log_obj_all = testcase_obj.problem_log.all()
+    def update_problem_testcase(self, request, problem_obj):
+        problem_testcase_obj_all = problem_obj.int_out_data.all()
+        problem_log_obj_all = problem_obj.problem_log.all()
 
+        is_success = None
         for problem_log_obj in problem_log_obj_all:
             server_client = problem_log_obj.server_client
 
-            url = server_client.host
-            username = server_client.username
-            password = server_client.mask_password
-
-            problem_crawler = ProblemCrawler(url, username, password)
+            problem_crawler = create_problem_crawler(server_client)
             web_testcases_all_dict = problem_crawler.get_testcases_all(
                 problem_id=problem_log_obj.web_problem_id
             )
@@ -135,10 +137,13 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                     "add_input": ("add.in", testcase_in),
                     "add_output": ("add.out", testcase_out),
                 }
-                problem_crawler.update_testcase(
+                is_success = problem_crawler.update_testcase(
                     form_data=problem_testcase_info_data,
                     id=problem_log_obj.web_problem_id,
                 )
+
+        if is_success:
+            messages.success(request, "測資更新成功！！")
 
     @action(label="更新題目資訊")
     def update_problem_information(self, request, obj):
@@ -156,17 +161,24 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         for problem_log_obj in problem_log_obj_all:
             server_client = problem_log_obj.server_client
+            problem_crawler = create_problem_crawler(server_client)
 
-            url = server_client.host
-            username = server_client.username
-            password = server_client.mask_password
-
-            problem_crawler = ProblemCrawler(url, username, password)
-            problem_crawler.update_problem_information(
+            is_success = problem_crawler.update_problem_information(
                 data=problem_info_data,
                 files=problem_files,
                 id=problem_log_obj.web_problem_id,
             )
+
+            if is_success:
+                messages.success(
+                    request,
+                    f"{problem_log_obj.server_client.name}({problem_log_obj.web_problem_contest}) 更新成功！！",
+                )
+            else:
+                messages.error(
+                    request,
+                    f"{problem_log_obj.server_client.name}({problem_log_obj.web_problem_contest}) 更新錯誤！！",
+                )
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -187,47 +199,33 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def upload_selected_problem(self, request, queryset):
-        domserver_dict = {}
-        domserver_accout = {}
-        for server_object in DomServerClient.objects.all():
+        dom_server_objects_all = DomServerClient.objects.all()
+        dom_server_name = [obj.name for obj in dom_server_objects_all]
 
-            domserver_dict[server_object.name] = server_object.host
-            domserver_accout[server_object.name] = {
-                "username": server_object.username,
-                "password": server_object.mask_password,
-            }
-
-        domserver_name_list = [key for key in domserver_dict.keys()]
-        update_problem_name = dict()
+        used_contest_name_dict = dict()
         process = False
         for query in queryset:
 
             if query.is_processed:
                 process = True
-                problem_server_contest_info = []
+                problem_contest_info_list = list()
 
                 for problem_log_object in query.problem_log.all():
-                    problem_server_contest_info.append(
+                    problem_contest_info_list.append(
                         f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
                     )
 
-                if problem_server_contest_info:
-                    update_problem_name[query.name] = ", ".join(
-                        problem_server_contest_info
+                if problem_contest_info_list:
+                    used_contest_name_dict[query.name] = ", ".join(
+                        problem_contest_info_list
                     )
 
-        field_name = ""
-        if domserver_name_list:
-            host = domserver_dict[domserver_name_list[0]]
-            username = domserver_accout[domserver_name_list[0]].get("username")
-            password = domserver_accout[domserver_name_list[0]].get("password")
+        contest_name = None
+        if dom_server_objects_all:
+            problem_crawler = create_problem_crawler(dom_server_objects_all[0])
+            data = problem_crawler.get_contests_list_all()
 
-            problem_crawler = ProblemCrawler(
-                url=host, username=username, password=password
-            )
-            data = problem_crawler.get_contests_all()
-
-            field_name = [field["formal_name"] for field in data]
+            contest_name = [(name, obj.conteset_id) for name, obj in data.items()]
 
         id_list = request.POST.getlist("_selected_action")
         upload_objects = Problem.objects.filter(id__in=id_list)
@@ -235,67 +233,71 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         context = {
             "process": process,
             "upload_objects": upload_objects,
-            "update_problem_name": update_problem_name,
-            "domserver_name_list": domserver_name_list,
-            "domserver_dict": domserver_dict,
-            "field_name": field_name,
+            "update_problem_name": used_contest_name_dict,
+            "dom_server_name": dom_server_name,
+            "contest_name": contest_name,
         }
 
         return render(request, "admin/upload_process.html", context)
 
     upload_selected_problem.short_description = "上傳所選的 題目"
 
-    def updown_selected_problem(self, request, queryset):
-        server_clients_information = server_clients_all_information()
+    def updown_selected_contest(self, request, queryset):
+        id_list = request.POST.getlist("_selected_action")
+        updown_contest_objects = Problem.objects.filter(id__in=id_list)
 
-        for problem_obj in queryset:
-            problem_obj.is_processed = False
+        update_problem_name_dict = dict()
 
-            problem_log_del_dict = dict()
-            problem_log_obj_all = problem_obj.problem_log.all()
-            for problem_log_obj in problem_log_obj_all:
-                if problem_log_obj.server_client not in problem_log_del_dict:
-                    problem_log_del_dict[
-                        problem_log_obj.server_client
-                    ] = problem_log_obj.web_problem_id
+        for query in queryset:
+            problem_server_contest_info = []
 
-            for client, web_problem_id in problem_log_del_dict.items():
-                host = server_clients_information[client.name].get("host")
-                username = server_clients_information[client.name].get("username")
-                password = server_clients_information[client.name].get("password")
-
-                problem_crawler = ProblemCrawler(
-                    url=host,
-                    username=username,
-                    password=password,
+            for problem_log_object in query.problem_log.all():
+                problem_server_contest_info.append(
+                    f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
                 )
 
-                problem_crawler.delete_problem(id=web_problem_id)
-            problem_log_obj_all.delete()
+            if problem_server_contest_info:
+                update_problem_name_dict[query.name] = ", ".join(
+                    problem_server_contest_info
+                )
+
+        server_clients = DomServerClient.objects.all()
+        dom_server_name_list = [obj.name for obj in server_clients]
+
+        problem_crawler = create_problem_crawler(server_client=server_clients[0])
+
+        data = problem_crawler.get_contests_list_all()
+        contest_name = {(name, obj.conteset_id) for name, obj in data.items()}
+
+        context = {
+            "updown_objects": updown_contest_objects,
+            "update_problem_name": update_problem_name_dict,
+            "domserver_name_list": dom_server_name_list,
+            "field_name": contest_name,
+        }
+
+        return render(request, "admin/updown_process.html", context)
+
+    updown_selected_contest.short_description = "撤銷所選的 考區"
+
+    def updown_selected_problem(self, request, queryset):
+        problem_del_info_dict = dict()
+        for problem_obj in queryset:
+            problem_obj.is_processed = False
+            problem_log_all = problem_obj.problem_log.all()
+
+            for problem_log in problem_log_all:
+                server_client_obj = problem_log.server_client
+                if server_client_obj not in problem_del_info_dict:
+                    problem_del_info_dict[
+                        server_client_obj
+                    ] = problem_log.web_problem_id
+                problem_log.delete()
+
+        for obj, web_id in problem_del_info_dict.items():
+            problem_crawler = create_problem_crawler(server_client=obj)
+            problem_crawler.delete_problem(id=web_id)
+
         Problem.objects.bulk_update(queryset, ["is_processed"])
 
     updown_selected_problem.short_description = "撤銷所選的 題目"
-
-    def updown_selected_contest(self, request, queryset):
-        domclients_info = server_clients_all_information()
-        queryset_list = []
-
-        for query in queryset:
-            problem_contests_info = query.domserver.all()
-            for contest in problem_contests_info:
-                if "contest_set" in domclients_info[contest.server_name]:
-                    domclients_info[contest.server_name]["contest_set"].add(
-                        contest.problem_web_contest
-                    )
-                else:
-                    domclients_info[contest.server_name]["contest_set"] = set()
-                    domclients_info[contest.server_name]["contest_set"].add(
-                        contest.problem_web_contest
-                    )
-
-        print(domclients_info)
-        context = {}
-
-        # return render(request, "admin/updown_process.html", context)
-
-    updown_selected_contest.short_description = "撤銷所選的 考區"

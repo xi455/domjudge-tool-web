@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
-from app.problems.views import problem_view
+from app.problems.views import contests_list_view, problem_contest_view, problem_view
 from app.users import views as user_views
 from core.docs import DEFAULT_API_DOC_URL, SchemaView
 
@@ -38,5 +38,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("problem/", include("app.problems.urls", namespace="problem")),
     path("problem_upload/", problem_view, name="problem_upload"),
+    path(
+        "problem_contest_updown/", problem_contest_view, name="problem_contest_updown"
+    ),
+    path("contests_list/", contests_list_view, name="contests_list"),
     path("", RedirectView.as_view(pattern_name="admin:index")),
 ]
