@@ -18,11 +18,11 @@ class DomServerClient(BaseModel):
         max_length=128,
         help_text='必須要有 "API reader", "API writer" roles',
     )
-    mask_password = models.CharField(
+    mask_password = encrypt(models.CharField(
         "密碼",
         max_length=128,
         # editable=False,
-    )
+    ))
     disable_ssl = models.BooleanField(default=False)
     timeout = models.BooleanField(default=False)
     category_id = models.BigIntegerField(

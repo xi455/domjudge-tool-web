@@ -1,10 +1,8 @@
 from enum import Enum
-
-import requests
-
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
+import requests
 import app.problems.exceptions as exceptions
 
 
@@ -90,7 +88,7 @@ class ProblemCrawler:
             web_contest_id = td_elements[0].text.strip()
             if web_contest_id == contests_id:
                 web_contest_name = td_elements[1].text.strip()
-        
+
                 return web_contest_name
 
     def upload_problem(self, files, contest_id):

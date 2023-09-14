@@ -1,5 +1,5 @@
 from django.core.files.storage import default_storage
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, ValidationError
 from django.db import models
 
 from app.domservers.models import DomServerClient
@@ -11,8 +11,13 @@ def problem_file_path(instance, filename):
     return f"problems/problem_{_id}/problem.pdf"
 
 
+def validate_problem_name(value):
+    if value[0].isdigit():
+        raise ValidationError("題目名稱首字不可為數字")
+
+
 class Problem(BaseModel):
-    name = models.CharField("題目名稱", max_length=255)
+    name = models.CharField("題目名稱", max_length=255, validators=[validate_problem_name])
     short_name = models.CharField("題目代號", max_length=50, help_text="ex: p01")
     description_file = models.FileField(
         "題目說明檔",

@@ -1,7 +1,5 @@
-import hashlib
-
-from app.domservers.models import DomServerClient
 from app.problems.crawler import ProblemCrawler
+import hashlib
 
 
 def action_display(
@@ -31,20 +29,6 @@ def testcase_md5(testcase):
     testcase_md5_hash = hashlib.md5(encoded_string).hexdigest()
 
     return testcase_md5_hash
-
-
-def server_clients_all_information():
-    server_clients_obj_all = DomServerClient.objects.all()
-    server_clients_information = {}
-
-    for server_obj in server_clients_obj_all:
-        server_clients_information[server_obj.name] = {
-            "host": server_obj.host,
-            "username": server_obj.username,
-            "password": server_obj.mask_password,
-        }
-
-    return server_clients_information
 
 
 def create_problem_crawler(server_client):

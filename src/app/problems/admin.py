@@ -8,11 +8,10 @@ from pydantic import BaseModel
 from app.domservers.models import DomServerClient
 from src.utils.admins import (
     create_problem_crawler,
-    server_clients_all_information,
     testcase_md5,
 )
 
-from .crawler import ProblemCrawler
+from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
 
 
@@ -34,6 +33,9 @@ class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
 
 @admin.register(Problem)
 class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
+
+    # form = ProblemNameForm
+
     list_display = (
         "short_name",
         "name",
@@ -46,7 +48,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_filter = ("create_at", "update_at")
     search_fields = ("name", "short_name")
     inlines = [ProblemInOutInline]
-    readonly_fields = ("id", "owner", "update_illustrate")
+    readonly_fields = ("id", "owner", "update_illustrate", "web_problem_id")
     fieldsets = (
         (
             None,
@@ -284,6 +286,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         problem_del_info_dict = dict()
         for problem_obj in queryset:
             problem_obj.is_processed = False
+            problem_obj.web_problem_id = None
             problem_log_all = problem_obj.problem_log.all()
 
             for problem_log in problem_log_all:
@@ -298,6 +301,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             problem_crawler = create_problem_crawler(server_client=obj)
             problem_crawler.delete_problem(id=web_id)
 
-        Problem.objects.bulk_update(queryset, ["is_processed"])
+        Problem.objects.bulk_update(queryset, ["is_processed", "web_problem_id"])
 
     updown_selected_problem.short_description = "撤銷所選的 題目"

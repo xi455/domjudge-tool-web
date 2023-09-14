@@ -67,6 +67,7 @@ def problem_view(request):
             response_zip = build_zip_response(problem_obj)
 
             content = b"".join(response_zip.streaming_content)
+
             upload_files_info_list.append(
                 (
                     "problem_upload_multiple[archives][]",
