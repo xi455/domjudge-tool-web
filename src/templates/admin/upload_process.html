@@ -79,7 +79,7 @@
                                 </div>
                                 {% if process %}
                                   <div class="form-group">
-                                    <input type="submit" class="btn {{ jazzmin_ui.button_classes.danger }} form-control" value="{% trans "Yes, I'm sure" %}">
+                                    <input type="submit" id="input_submit" class="btn {{ jazzmin_ui.button_classes.danger }} form-control" value="{% trans "Yes, I'm sure" %}">
                                   </div>
                                   <div class="form-group">
                                     <input type="button" onclick="back()"
@@ -87,7 +87,7 @@
                                   </div>
                                 {% else %}
                                 <div class="form-group">
-                                  <input type="submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control" value="{% trans "Yes, I'm sure" %}">
+                                  <input type="submit" id="input_submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control" value="{% trans "Yes, I'm sure" %}">
                                 </div>
                                 <div class="form-group">
                                   <input type="button" onclick="back()"
@@ -110,16 +110,18 @@
   const domserverSelect = document.querySelector('[name="domserver"]');
   const contestsSelect = document.querySelector('[name="contests"]');
   const contentHeader = document.querySelector('.content-header');
+  const inputSubmit = document.querySelector('#input_submit');
   const csrfToken = "{{ csrf_token }}";
 
   domserverSelect.addEventListener('change', function() {
+    inputSubmit.disabled = true
 
     contestsSelect.innerHTML = ""
     const selected_dict = {
       "name": domserverSelect.value
     }
 
-    fetch("/contests_list/", {
+    fetch("/contests-list/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -133,6 +135,8 @@
           for(key in data){
             contestsSelect.innerHTML += `<option value="${data[key]}">${key}</option>;`
           }
+
+          inputSubmit.disabled = false
       })
 
     .catch(error => {

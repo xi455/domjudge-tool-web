@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 
 from app.domservers.models.dom_server import DomServerClient
-from src.utils.admins import create_problem_crawler
+from utils.admins import create_problem_crawler
 
 from .forms import ServerClientForm
 from .models import Problem, ProblemServerLog
@@ -96,6 +96,7 @@ def problem_view(request):
                     web_problem_contest=problem_crawler.get_contest_name(
                         contests_id=contests_id
                     ),
+                    web_problem_state="新增",
                     web_problem_id=web_problem_id,
                 )
                 update_server_log_obj_list.append(new_problem_log_obj)
@@ -121,6 +122,7 @@ def problem_view(request):
                     problem=upload_problem_obj_list[index],
                     server_client=server_client,
                     web_problem_id=problem_id_list[index],
+                    web_problem_state="新增",
                     web_problem_contest=problem_crawler.get_contest_name(contest_id),
                 )
 
@@ -145,29 +147,41 @@ def problem_contest_view(request):
 
     server_client = get_object_or_404(DomServerClient, name=domserver_name)
     problem_crawler = create_problem_crawler(server_client=server_client)
+    contest_name = problem_crawler.get_contest_name(contests_id=contests_id)
 
     for pk in problem_objects_id:
         problem_obj = get_object_or_404(Problem, pk=pk)
-        problem_log_all = problem_obj.problem_log.all()
+        problem_log_all = problem_obj.problem_log.all().order_by("-id")
 
+        upload_server_log_obj_list = list()
         for problem_log in problem_log_all:
-            contest_name = problem_crawler.get_contest_name(contests_id=contests_id)
 
             if (
                 problem_log.server_client.name == domserver_name
                 and problem_log.web_problem_contest == contest_name
+                and problem_log.web_problem_state == "新增"
             ):
+                print(contests_id, problem_log.web_problem_id)
                 is_success = problem_crawler.delete_contest_problem(
                     contest_id=contests_id,
                     web_problem_id=problem_log.web_problem_id,
                 )
 
+                print(is_success)
                 if is_success:
+                    new_problem_log_obj = ProblemServerLog(
+                        problem=problem_log.problem,
+                        server_client=problem_log.server_client,
+                        web_problem_id=problem_log.web_problem_id,
+                        web_problem_state="移除",
+                        web_problem_contest=problem_log.web_problem_contest,
+                    )
+                    upload_server_log_obj_list.append(new_problem_log_obj)
+                    ProblemServerLog.objects.bulk_create(upload_server_log_obj_list)
+
                     messages.success(request, "考區題目移除成功！！")
                 else:
                     messages.error(request, "此考區並未找到該題目！！")
-
-                problem_log.delete()
                 break
 
     return redirect("/admin/problems/problem/")

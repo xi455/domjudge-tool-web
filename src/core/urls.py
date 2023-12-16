@@ -14,9 +14,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from app.domservers.views import (
+    contest_create_view,
+    contest_information_edit_view,
+    contest_problem_create_view,
+    contest_problem_select_edit_view,
+    contest_problem_upload_edit_view,
+    contest_problem_copy_view,
+)
 from app.problems.views import contests_list_view, problem_contest_view, problem_view
 from app.users import views as user_views
 from core.docs import DEFAULT_API_DOC_URL, SchemaView
@@ -37,10 +46,36 @@ urlpatterns = [
     path("admin/register/", user_views.register, name="register"),
     path("admin/", admin.site.urls),
     path("problem/", include("app.problems.urls", namespace="problem")),
-    path("problem_upload/", problem_view, name="problem_upload"),
+    path("problem-upload/", problem_view, name="problem_upload"),
     path(
-        "problem_contest_updown/", problem_contest_view, name="problem_contest_updown"
+        "problem-contest_updown/", problem_contest_view, name="problem_contest_updown"
     ),
-    path("contests_list/", contests_list_view, name="contests_list"),
+    path("contests-list/", contests_list_view, name="contests_list"),
+    path("contest/create/", contest_create_view, name="contest_create"),
+    path(
+        "contest-problem/create",
+        contest_problem_create_view,
+        name="contest_problem_create",
+    ),
+    path(
+        "contest/<name>/<id>/edit",
+        contest_information_edit_view,
+        name="contest_information_edit",
+    ),
+    path(
+        "contest/<name>/<id>/problem-select/edit",
+        contest_problem_select_edit_view,
+        name="contest_problem_select_edit",
+    ),
+    path(
+        "contest/<name>/<id>/upload/edit",
+        contest_problem_upload_edit_view,
+        name="contest_problem_upload_edit",
+    ),
+    path(
+        "contest/<name>/<id>/copy",
+        contest_problem_copy_view,
+        name="contest_information_copy",
+    ),
     path("", RedirectView.as_view(pattern_name="admin:index")),
 ]

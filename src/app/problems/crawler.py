@@ -1,8 +1,14 @@
+import json
+
+from datetime import datetime
 from enum import Enum
-from bs4 import BeautifulSoup
-from pydantic import BaseModel
+from typing import Optional
 
 import requests
+
+from bs4 import BeautifulSoup
+from pydantic import BaseModel, validator
+
 import app.problems.exceptions as exceptions
 
 
@@ -16,6 +22,29 @@ class ServerContest(BaseModel):
     conteset_id: str
 
 
+class ContestInfo(BaseModel):
+    CID: Optional[str] = None
+    name: Optional[str] = None
+    shortname: Optional[str] = None
+    activate: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    processballoons: Optional[str] = None
+    public: Optional[str] = None
+    teams: Optional[str] = None
+    problems: Optional[str] = None
+
+
+class ContestDetails(BaseModel):
+    contest_name: str
+    contest_info: ContestInfo
+
+
+class ProblemInfo(BaseModel):
+    id: str
+    name: str
+
+
 class HomePath(str, Enum):
     LOGIN = "/login"
     JURY = "/jury"
@@ -23,14 +52,18 @@ class HomePath(str, Enum):
 
 class ProblemPath(str, Enum):
     GET = "/jury/problems"
-    ADD = "/jury/problems"
+    POST = "/jury/problems"
     EDIT = "/jury/problems/{}/edit"
     DELETE = "/jury/problems/{}/delete"
 
 
 class ConTestPath(str, Enum):
     GET = "/jury/contests"
-    EDIT = "/jury/contests/{}/edit"
+    GET_SINGLE = "/jury/contests/{}"
+    GET_SINGLE_EDIT = "/jury/contests/{}/edit"
+    POST = "/jury/contests/add"
+    POST_SINGLE = "/jury/contests/{}/edit"
+    POST_SINGLE_EDIT = "/jury/contests/{}/edit"
     DELETE = "/jury/contests/{}/problems/{}/delete"
 
 
@@ -39,6 +72,11 @@ class TestCasePath(str, Enum):
     GET_INPUT = "/jury/problems/{}/testcases/{}/fetch/input"
     GET_OUTPUT = "/jury/problems/{}/testcases/{}/fetch/output"
     DELETE = "/jury/problems/{}/delete_testcase"
+
+
+class ApiPath(str, Enum):
+    CONTEST_YAML = "/api/v4/contests/{}/contest-yaml"
+    CONTEST_POST = "/api/v4/contests"
 
 
 class ProblemCrawler:
@@ -91,6 +129,77 @@ class ProblemCrawler:
 
                 return web_contest_name
 
+    # def get_contest_yaml(self, constest_id):
+    #     return self.session.get(self.url + ApiPath.CONTEST_YAML.format(constest_id))
+
+    def get_contest_all(self):
+
+        # get the all domjudge contest.
+
+        page = self.session.get(self.url + ConTestPath.GET)
+
+        soup = BeautifulSoup(page.text, "html.parser")
+
+        table_elements = soup.select(
+            "table",
+            {
+                "class": "data-table table table-sm table-striped dataTable no-footer",
+                "id": "DataTables_Table_0",
+            },
+        )
+
+        thead_elements = table_elements[-1].select("thead th")
+        tr_elements = table_elements[-1].select("tbody tr")
+        contests_detail_dict = dict()
+
+        button_without_title = 2
+        for tr_element in tr_elements:
+
+            td_elements = tr_element.select("td")
+            contest_name = td_elements[2].text.strip()
+            contest_info_dict = dict()
+            for index in range(len(thead_elements) - button_without_title):
+
+                thead = (
+                    thead_elements[index]
+                    .text.strip()
+                    .replace("?", "")
+                    .replace("# ", "")
+                )
+                td = td_elements[index].text.strip()
+                contest_info_dict[thead] = td
+
+            contest_details = ContestInfo(**contest_info_dict)
+            contests_detail_dict[contest_name] = contest_details
+
+        return contests_detail_dict
+
+    def get_problems(self):
+
+        # get domjudge all problem information return dict type
+        # example: {problem_name: class(id=problem_id, name=problem_name)}
+
+        page = self.session.post(self.url + ProblemPath.GET)
+        soup = BeautifulSoup(page.text, "html.parser")
+
+        problem_data_dict = dict()
+        tr_elements = soup.select("table tr")
+        for index in range(1, len(tr_elements)):
+            td_elements = tr_elements[index].select("td")
+
+            id = td_elements[0].text.strip()
+            name = td_elements[1].text.strip()
+
+            problem_info = {
+                "id": id,
+                "name": name,
+            }
+
+            problem_obj = ProblemInfo(**problem_info)
+            problem_data_dict[name] = problem_obj
+
+        return problem_data_dict
+
     def upload_problem(self, files, contest_id):
 
         data = {
@@ -101,7 +210,7 @@ class ProblemCrawler:
         for file_name in files:
             problem_name_list.append(file_name[1][0])
 
-        page = self.session.post(self.url + ProblemPath.ADD, data=data, files=files)
+        page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
         soup = BeautifulSoup(page.text, "html.parser")
         alert = soup.select_one(".alert-dismissible").get("class")
 
@@ -127,7 +236,9 @@ class ProblemCrawler:
         return is_succeed, problem_id_list, contest_id
 
     def get_contest_problem_count(self, contest_id):
-        page = self.session.get(self.url + ConTestPath.EDIT.format(contest_id))
+        page = self.session.get(
+            self.url + ConTestPath.GET_SINGLE_EDIT.format(contest_id)
+        )
         soup = BeautifulSoup(page.text, "html.parser")
         thead_elements = soup.select(".table thead")
 
@@ -169,8 +280,48 @@ class ProblemCrawler:
 
         return server_contests_info_dict
 
-    def contest_problem_upload(self, contest_id, problem_data):
-        page = self.session.get(self.url + ConTestPath.EDIT.format(contest_id))
+    def contest_and_problem_create(self, create_contest_information):
+
+        # Post the contest area creation information and upload it to
+        # domjudge to create a new contest area.
+
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+        del create_contest_information["contest[teams][]"]
+        del create_contest_information["contest[teamCategories][]"]
+
+        page = self.session.post(
+            self.url + ConTestPath.POST,
+            data=create_contest_information,
+            headers=headers,
+        )
+
+        print("status_code:", page.status_code)
+
+    def contest_problem_update(self, contest_id, contest_data_dict):
+
+        problem_information_dict = self.get_contest_or_problem_information(contest_id=contest_id, need_content="problem")
+        contest_data_dict.update(problem_information_dict)
+        
+        contest_data_dict.update({"contest[save]": ""})
+        print(contest_data_dict)
+
+        page = self.session.post(
+            self.url + ConTestPath.POST_SINGLE.format(contest_id),
+            data=contest_data_dict,
+        )
+
+        print(page.status_code)
+
+    def get_contest_or_problem_information(self, contest_id, need_content=None):
+
+        # get contest or problem information.
+        # need_contest="contest", get the contest information.
+        # need_contest="problem", get the problem information.
+
+        page = self.session.get(
+            self.url + ConTestPath.GET_SINGLE_EDIT.format(contest_id)
+        )
 
         soup = BeautifulSoup(page.text, "html.parser")
         input_elements = soup.find_all("input")
@@ -197,14 +348,39 @@ class ProblemCrawler:
                 value = input_elem.get("value")
                 contest_problem_info_dict[name] = value
 
+        contest_problem_info_dict["contest[save]"] = ""
+
+        if need_content == "contest":
+            contest_problem_info_dict = {
+                key: value
+                for key, value in contest_problem_info_dict.items()
+                if "problems" not in key
+            }
+
+        if need_content == "problem":
+            contest_problem_info_dict = {
+                key: value
+                for key, value in contest_problem_info_dict.items()
+                if "problems" in key
+            }
+
+        return contest_problem_info_dict
+
+    def contest_problem_upload(self, contest_id, problem_data):
+        contest_problem_info_dict = self.get_contest_or_problem_information(
+            contest_id=contest_id
+        )
+
         del contest_problem_info_dict["contest[teams][]"]
         del contest_problem_info_dict["contest[teamCategories][]"]
 
         contest_problem_info_dict.update(problem_data)
-        contest_problem_info_dict["contest[save]"]: ""
+
+        for key, value in contest_problem_info_dict.items():
+            print(key, value, type(value))
 
         page = self.session.post(
-            self.url + ConTestPath.EDIT.format(contest_id),
+            self.url + ConTestPath.POST_SINGLE.format(contest_id),
             data=contest_problem_info_dict,
         )
 
@@ -283,6 +459,9 @@ class ProblemCrawler:
         page = self.session.post(
             self.url + ConTestPath.DELETE.format(contest_id, web_problem_id)
         )
+
+        print(self.url + ConTestPath.DELETE.format(contest_id, web_problem_id))
+        print(page.status_code)
 
         is_success = True
         if page.status_code == 404:

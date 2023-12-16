@@ -6,10 +6,7 @@ from django_object_actions import DjangoObjectActions, action
 from pydantic import BaseModel
 
 from app.domservers.models import DomServerClient
-from src.utils.admins import (
-    create_problem_crawler,
-    testcase_md5,
-)
+from utils.admins import create_problem_crawler, testcase_md5
 
 from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
@@ -28,7 +25,13 @@ class ProblemInOutInline(admin.TabularInline):
 
 @admin.register(ProblemServerLog)
 class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
-    pass
+    list_display = (
+        "problem",
+        "server_client",
+        "web_problem_id",
+        "web_problem_contest",
+        "web_problem_state",
+    )
 
 
 @admin.register(Problem)
@@ -208,14 +211,20 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         process = False
         for query in queryset:
 
+            contest_list = list()
             if query.is_processed:
                 process = True
                 problem_contest_info_list = list()
+                problem_log_all = query.problem_log.all().order_by("-id")
 
-                for problem_log_object in query.problem_log.all():
-                    problem_contest_info_list.append(
-                        f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
-                    )
+                for problem_log_object in problem_log_all:
+                    if problem_log_object.web_problem_contest not in contest_list:
+                        contest_list.append(problem_log_object.web_problem_contest)
+
+                        if problem_log_object.web_problem_state == "新增":
+                            problem_contest_info_list.append(
+                                f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
+                            )
 
                 if problem_contest_info_list:
                     used_contest_name_dict[query.name] = ", ".join(
@@ -251,12 +260,19 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         update_problem_name_dict = dict()
 
         for query in queryset:
-            problem_server_contest_info = []
+            problem_server_contest_info = list()
+            problem_log_all = query.problem_log.all().order_by("-id")
 
-            for problem_log_object in query.problem_log.all():
-                problem_server_contest_info.append(
-                    f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
-                )
+            contest_name_list = list()
+            for problem_log_object in problem_log_all:
+
+                if problem_log_object.web_problem_contest not in contest_name_list:
+                    contest_name_list.append(problem_log_object.web_problem_contest)
+
+                    if problem_log_object.web_problem_state == "新增":
+                        problem_server_contest_info.append(
+                            f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
+                        )
 
             if problem_server_contest_info:
                 update_problem_name_dict[query.name] = ", ".join(
@@ -284,22 +300,51 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     def updown_selected_problem(self, request, queryset):
         problem_del_info_dict = dict()
+        upload_server_log_obj_list = list()
+
         for problem_obj in queryset:
             problem_obj.is_processed = False
             problem_obj.web_problem_id = None
-            problem_log_all = problem_obj.problem_log.all()
+            problem_log_all = problem_obj.problem_log.all().order_by("-id")
 
+            del_problem_id_list = list()
+            contest_name_list = list()
             for problem_log in problem_log_all:
                 server_client_obj = problem_log.server_client
                 if server_client_obj not in problem_del_info_dict:
-                    problem_del_info_dict[
-                        server_client_obj
-                    ] = problem_log.web_problem_id
-                problem_log.delete()
+                    problem_del_info_dict[server_client_obj] = del_problem_id_list
 
-        for obj, web_id in problem_del_info_dict.items():
-            problem_crawler = create_problem_crawler(server_client=obj)
-            problem_crawler.delete_problem(id=web_id)
+                if problem_log.web_problem_contest not in contest_name_list:
+                    contest_name_list.append(problem_log.web_problem_contest)
+
+                    if problem_log.web_problem_state == "新增":
+                        problem_del_info_dict[server_client_obj].append(problem_log)
+                # problem_log.delete()
+
+        print(problem_del_info_dict)
+        for server_client_obj, problem_log_obj_list in problem_del_info_dict.items():
+            print(server_client_obj, problem_log_obj_list)
+            for problem_log_obj in problem_log_obj_list:
+                new_problem_log_obj = ProblemServerLog(
+                    problem=problem_log_obj.problem,
+                    server_client=problem_log_obj.server_client,
+                    web_problem_id=problem_log_obj.web_problem_id,
+                    web_problem_state="移除",
+                    web_problem_contest=problem_log_obj.web_problem_contest,
+                )
+
+                upload_server_log_obj_list.append(new_problem_log_obj)
+
+            # ## 新增
+            ProblemServerLog.objects.bulk_create(upload_server_log_obj_list)
+
+        print(problem_del_info_dict)
+        # ------------------------------------------------------------
+        for server_client_obj, problem_log_obj_list in problem_del_info_dict.items():
+            problem_crawler = create_problem_crawler(server_client=server_client_obj)
+
+            for problem_log_obj in problem_log_obj_list:
+                problem_crawler.delete_problem(id=problem_log_obj.web_problem_id)
 
         Problem.objects.bulk_update(queryset, ["is_processed", "web_problem_id"])
 

@@ -1,5 +1,13 @@
-from app.problems.crawler import ProblemCrawler
 import hashlib
+
+from app.problems.crawler import ProblemCrawler
+
+
+class DomjudgeUser:
+    def __init__(self, url: str, username: str, password: str):
+        self.url = url
+        self.username = username
+        self.password = password
 
 
 def action_display(

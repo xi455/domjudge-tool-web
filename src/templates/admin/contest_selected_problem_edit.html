@@ -1,0 +1,134 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}
+delete-confirmation{%endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb float-sm-right">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
+</ol>
+{% endblock %}
+
+{% block content_title %}
+選擇題目
+{% endblock %}
+{% block content %}
+
+<div class="col-12">
+    {{contest_update_data_json}}
+    {% if process %}
+    <div class="card card-danger card-outline">
+        {% else %}
+        <div class="card card-primary card-outline">
+            {% endif %}
+            <div class="card-header with-border">
+                <h4 class="card-title">
+                    選擇放入考區的題目
+                </h4>
+            </div>
+
+            <div class="card-body">
+                <div id="content-main">
+                    <form action="{% url 'contest_problem_upload_edit' client_name contest_id %}" method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-12 col-sm-9">
+                                <div class="form-check w-100">
+                                    <input type="checkbox" style="width: 1.3rem; height: 1.3rem;"
+                                        class="form-check-input" id="selectAll">
+                                    <div class="form-group text-center border rounded p-1 m-2">
+                                        <label class="form-check-label" for="selectAll">全選</label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% for name, obj in problem_data_dict.items %}
+                            <div class="col-12 col-sm-9">
+                                <div class="form-check w-100">
+                                    {% if obj.id in existing_problem_id_list %}
+                                    <input class="form-check-input" style="width: 1.3rem; height: 1.3rem;"
+                                        type="checkbox" value="{{name}}:{{obj.id}}" name="checkboxGroup" id="{{obj.id}}"
+                                        checked="checked">
+                                    {% else %}
+                                    <input class="form-check-input" style="width: 1.3rem; height: 1.3rem;"
+                                        type="checkbox" value="{{name}}:{{obj.id}}" name="checkboxGroup"
+                                        id="{{obj.id}}">
+                                    {% endif %}
+                                    <div class="form-group text-center border rounded p-1 m-2">
+                                        <label class="form-check-label" for="{{obj.id}}">
+                                            {{obj.name}}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+
+                            <div class="col-12 col-sm-3 mt-auto">
+                                <input type="hidden" name="contestDataJson" id="contestHidden">
+                                <input type="hidden" name="selectedCheckboxes" id="checkboxHidden">
+                                <div class="form-group">
+                                    <button onclick="getSelectedCheckboxes()" type="button"
+                                        class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
+                                        更改考區
+                                    </button>
+                                </div>
+
+                                <div class="form-group">
+                                    <button onclick="back()" type="button"
+                                        class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
+                                        返回
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function back() {
+            window.history.back()
+        }
+
+        let select_all = document.querySelector("#selectAll")
+        select_all.addEventListener("change", function () {
+            // 獲取所有其他複選框
+            let checkboxes = document.querySelectorAll(".form-check-input");
+
+            // 將所有其他複選框的狀態設置為與全選框相同
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = document.getElementById("selectAll").checked;
+            });
+        });
+
+        function getSelectedCheckboxes() {
+            // 获取所有选中的复选框的值
+            let checkboxes = document.querySelectorAll('input[name="checkboxGroup"]:checked');
+            let selectedCheckboxes = Array.from(checkboxes).map(function (checkbox) {
+                let parts = checkbox.value.split(':');
+                return {
+                    name: parts[0],
+                    id: parts[1]
+                };
+            });
+            let checkboxHidden = document.querySelector("#checkboxHidden");
+            let contestHidden = document.querySelector("#contestHidden");
+            let form = document.querySelector("form[method='post']");
+
+            checkboxHidden.value = JSON.stringify(selectedCheckboxes);
+            contestHidden.value = "{{ contest_update_data_json|escapejs }}";
+
+            form.submit();
+        }
+    </script>
+
+    {% endblock %}

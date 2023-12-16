@@ -102,5 +102,16 @@ class ProblemServerLog(models.Model):
     web_problem_id = models.CharField("網站題目ID", max_length=68)
     web_problem_contest = models.CharField("網站比賽區號", max_length=68)
 
+    class state(models.TextChoices):
+        FIRST_STATE = "新增", "新增"
+        SECOND_STATE = "移除", "移除"
+
+    web_problem_state = models.CharField(
+        verbose_name="存放狀態",
+        max_length=2,
+        choices=state.choices,
+        default=state.FIRST_STATE,
+    )
+
     def __str__(self):
         return f"{self.problem}"
