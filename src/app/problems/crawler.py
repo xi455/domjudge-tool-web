@@ -156,7 +156,7 @@ class ProblemCrawler:
         for tr_element in tr_elements:
 
             td_elements = tr_element.select("td")
-            contest_name = td_elements[2].text.strip()
+            contest_short_name = td_elements[1].text.strip()
             contest_info_dict = dict()
             for index in range(len(thead_elements) - button_without_title):
 
@@ -170,7 +170,10 @@ class ProblemCrawler:
                 contest_info_dict[thead] = td
 
             contest_details = ContestInfo(**contest_info_dict)
-            contests_detail_dict[contest_name] = contest_details
+            contests_detail_dict[contest_short_name] = contest_details
+
+        # for key, value in contests_detail_dict.items():
+        #     print(key, value)
 
         return contests_detail_dict
 
@@ -285,33 +288,51 @@ class ProblemCrawler:
         # Post the contest area creation information and upload it to
         # domjudge to create a new contest area.
 
+        # return the bool to see if it succeeded.
+
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-        del create_contest_information["contest[teams][]"]
-        del create_contest_information["contest[teamCategories][]"]
+        if (
+            ("contest[teams][]") in create_contest_information
+            and "contest[teamCategories][]" in create_contest_information
+        ):
+            del create_contest_information["contest[teams][]"]
+            del create_contest_information["contest[teamCategories][]"]
 
         page = self.session.post(
             self.url + ConTestPath.POST,
             data=create_contest_information,
             headers=headers,
         )
+        print(page.text)
 
-        print("status_code:", page.status_code)
+        if "Error" in page.text:
+            print("the upload is ", False)
+            return False
+        else:
+            print("the upload is ", True)
+            return True
 
     def contest_problem_update(self, contest_id, contest_data_dict):
 
-        problem_information_dict = self.get_contest_or_problem_information(contest_id=contest_id, need_content="problem")
+        # return the bool to see if it succeeded.
+
+        problem_information_dict = self.get_contest_or_problem_information(
+            contest_id=contest_id, need_content="problem"
+        )
         contest_data_dict.update(problem_information_dict)
-        
+
         contest_data_dict.update({"contest[save]": ""})
-        print(contest_data_dict)
 
         page = self.session.post(
             self.url + ConTestPath.POST_SINGLE.format(contest_id),
             data=contest_data_dict,
         )
 
-        print(page.status_code)
+        if "Error" in page.text:
+            return False
+        else:
+            return True
 
     def get_contest_or_problem_information(self, contest_id, need_content=None):
 

@@ -21,10 +21,9 @@ from django.views.generic import RedirectView
 from app.domservers.views import (
     contest_create_view,
     contest_information_edit_view,
-    contest_problem_create_view,
-    contest_problem_select_edit_view,
-    contest_problem_upload_edit_view,
     contest_problem_copy_view,
+    contest_problem_create_view,
+    contest_problem_upload_edit_view,
 )
 from app.problems.views import contests_list_view, problem_contest_view, problem_view
 from app.users import views as user_views
@@ -61,11 +60,6 @@ urlpatterns = [
         "contest/<name>/<id>/edit",
         contest_information_edit_view,
         name="contest_information_edit",
-    ),
-    path(
-        "contest/<name>/<id>/problem-select/edit",
-        contest_problem_select_edit_view,
-        name="contest_problem_select_edit",
     ),
     path(
         "contest/<name>/<id>/upload/edit",

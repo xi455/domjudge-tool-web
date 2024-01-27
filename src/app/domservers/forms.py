@@ -36,6 +36,13 @@ class DomServerAccountForm(forms.ModelForm):
 
 
 class DomServerContestCreatForm(forms.Form):
+    parsed_end = None
+    parsed_datetime = None
+    parsed_deactivate_time = None
+
+    parsed_scoreboard_freeze_length = None
+    parsed_scoreboard_unfreeze_time = None
+
     name = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
         required=True,
@@ -75,14 +82,6 @@ class DomServerContestCreatForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "form-control"}),
         required=False,
     )
-    # duration = forms.CharField(
-    #     widget=forms.TextInput(attrs={'class': 'form-control'}),
-    #     required=True,
-    #     )
-    # penalty_time = forms.IntegerField(
-    #     widget=forms.TextInput(attrs={'class': 'form-control'}),
-    #     required=True,
-    #     )
     start_time_enabled = forms.BooleanField(
         widget=forms.TextInput(
             attrs={
@@ -218,7 +217,7 @@ class DomServerContestCreatForm(forms.Form):
             return scoreboard_freeze_length
 
         raise forms.ValidationError(
-            ("%(time)s 格式錯誤 請提供有效的持續時間格式（例如：+2:00:00）"),
+            ("%(time)s 格式錯誤 請提供有效的凍結時間格式（例如：+2:00:00）"),
             code="invalid",
             params={"time": scoreboard_freeze_length},
         )
@@ -228,7 +227,6 @@ class DomServerContestCreatForm(forms.Form):
 
         if self.validate_time_format(end_time):
             if hasattr(self, "parsed_datetime"):
-
                 if end_time[0] != "+":
                     raise forms.ValidationError(
                         ("結束時間必須大於等於開始時間"),
@@ -243,7 +241,7 @@ class DomServerContestCreatForm(forms.Form):
             return end_time
 
         raise forms.ValidationError(
-            ("%(time)s 格式錯誤 請提供有效的持續時間格式（例如：+2:00:00）"),
+            ("%(time)s 格式錯誤 請提供有效的結束時間格式（例如：+03:00:00）"),
             code="invalid",
             params={"time": end_time},
         )
@@ -274,7 +272,7 @@ class DomServerContestCreatForm(forms.Form):
                 )
 
             raise forms.ValidationError(
-                ("前方欄位疑似有誤請再次檢查"),
+                ("結束時間欄位疑似有誤請再次檢查"),
                 code="invalid",
             )
 
@@ -311,7 +309,7 @@ class DomServerContestCreatForm(forms.Form):
                 )
 
             raise forms.ValidationError(
-                ("前方欄位疑似有誤請再次檢查"),
+                ("解凍時間欄位疑似有誤請再次檢查"),
                 code="invalid",
             )
 
