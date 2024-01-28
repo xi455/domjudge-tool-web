@@ -16,6 +16,8 @@ from pydantic import BaseModel, validator
 from app.domservers.forms import DomServerContestCreatForm
 from app.domservers.models import DomServerClient
 from utils.admins import create_problem_crawler
+from utils.forms import validate_country_format, validate_time_format
+from utils.views import contest_initial_data_format
 
 # Create your views here.
 
@@ -29,10 +31,15 @@ def contest_create_view(request):
         if form.is_valid():
             print("the form is a success.")
             creat_contest_data = form.cleaned_data
-
             client_obj = DomServerClient.objects.get(name=client_name)
+
             problem_crawler = create_problem_crawler(client_obj)
             problem_data_dict = problem_crawler.get_problems()
+            contest_all_name = problem_crawler.get_contest_all_name()
+
+            if form.cleaned_data["short_name"] in contest_all_name:
+                messages.error(request, "考區簡稱重複！！請重新輸入")
+                return redirect(f"/contest/create/?server_client_name={client_name}")
 
             contest_data_json = json.dumps(creat_contest_data)
             context = {
@@ -41,14 +48,9 @@ def contest_create_view(request):
                 "problem_data_dict": problem_data_dict,
             }
 
-            return render(request, "admin/contest_selected_problem.html", context)
-        else:
-            print("the form is a danger.")
+            return render(request, "contest_selected_problem.html", context)
 
-    else:
-        # form = DomServerContestCreatForm()
-
-        # 測試________________
+    if request.method == "GET":
         initial_data = {
             "short_name": "contest",
             "name": "new contest",
@@ -58,13 +60,9 @@ def contest_create_view(request):
             "end_time": "+03:00:00",
             "scoreboard_unfreeze_time": "+03:30:00",  # 解凍時間必須大於結束時間
             "deactivate_time": "+36:00:00",  # 停用時間必須大於解凍時間
-            # "duration": "+02:00:00",
-            # "penalty_time": "20",
-            # 其他字段的初始值
         }
 
         form = DomServerContestCreatForm(initial=initial_data)
-        # 測試_____________end
         client_name = request.GET.get("server_client_name")
 
     context = {
@@ -72,14 +70,10 @@ def contest_create_view(request):
         "client_name": client_name,
     }
 
-    return render(request, "admin/contest_add.html", context)
+    return render(request, "contest_create.html", context)
 
 
-def contest_problem_create_view(request):
-    client_name = request.POST.get("client_name")
-    contest_data = json.loads(request.POST.get("contestDataJson"))
-    selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
-
+def contest_problem_process(contest_data: dict, selected_problem: dict):
     contest_information = {
         "contest[shortname]": contest_data.get("short_name"),
         "contest[name]": contest_data.get("name"),
@@ -122,6 +116,18 @@ def contest_problem_create_view(request):
     create_contest_information = contest_information
     create_contest_information.update(problem_information)
 
+    return create_contest_information
+
+
+def contest_problem_create_view(request):
+    client_name = request.POST.get("client_name")
+    contest_data = json.loads(request.POST.get("contestDataJson"))
+    selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
+
+    create_contest_information = contest_problem_process(
+        contest_data=contest_data, selected_problem=selected_problem
+    )
+
     client_obj = DomServerClient.objects.get(name=client_name)
 
     problem_crawler = create_problem_crawler(client_obj)
@@ -141,7 +147,29 @@ def contest_problem_create_view(request):
         "server_client_name": client_name,
     }
 
-    return render(request, "admin/get_contests.html", context)
+    return render(request, "contest_list.html", context)
+
+
+def contest_initial_data_format(initial_data: dict):
+
+    # Convert contest data to the same format.
+
+    for key, value in initial_data.items():
+
+        if value == "" or (len(value) > 9 and key != "start_time"):
+            continue
+
+        if key in ("short_name", "name") or value in ("0", "1"):
+            continue
+
+        if key == "start_time":
+            initial_data[key] = validate_country_format(time_string=value)
+            continue
+
+        if validate_time_format(time_string=value) is False:
+            initial_data[key] = f"{value}:00"
+
+    return initial_data
 
 
 def contest_information_edit_view(request, name, id):
@@ -214,6 +242,8 @@ def contest_information_edit_view(request, name, id):
             "open_to_all_teams": contest_info_response["contest[openToAllTeams]"],
             "enabled": contest_info_response["contest[enabled]"],
         }
+        print("initial_data:", initial_data)
+        initial_data = contest_initial_data_format(initial_data=initial_data)
 
         form = DomServerContestCreatForm(initial=initial_data)
 
@@ -318,7 +348,7 @@ def contest_problem_upload_edit_view(request, name, id):
         "server_client_name": name,
     }
 
-    return render(request, "admin/get_contests.html", context)
+    return render(request, "contest_list.html", context)
 
 
 def contest_problem_copy_view(request, name, id):
@@ -350,4 +380,4 @@ def contest_problem_copy_view(request, name, id):
         "server_client_name": name,
     }
 
-    return render(request, "admin/get_contests.html", context)
+    return render(request, "contest_list.html", context)

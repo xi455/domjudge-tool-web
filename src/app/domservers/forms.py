@@ -7,6 +7,7 @@ from django.core.validators import RegexValidator
 from pytz import UnknownTimeZoneError, timezone
 
 from app.domservers.models import DomServerClient
+from utils.forms import validate_time_format
 
 
 class DomServerAccountForm(forms.ModelForm):
@@ -133,13 +134,9 @@ class DomServerContestCreatForm(forms.Form):
         required=False,
     )
 
-    def validate_time_format(self, time_string):
-        pattern = r"^[+-][0-9][0-9]:[0-5][0-9]:[0-5][0-9]$"
-        return re.match(pattern, time_string) is not None
-
     def clean_activate_time(self):
         activate_time = self.cleaned_data.get("activate_time")
-        if self.validate_time_format(activate_time):
+        if validate_time_format(time_string=activate_time):
             if hasattr(self, "parsed_datetime"):
 
                 if activate_time[0] != "-":
@@ -185,7 +182,7 @@ class DomServerContestCreatForm(forms.Form):
             self.parsed_scoreboard_freeze_length = self.parsed_datetime
             return scoreboard_freeze_length
 
-        if self.validate_time_format(scoreboard_freeze_length):
+        if validate_time_format(time_string=scoreboard_freeze_length):
 
             if scoreboard_freeze_length[0] != "+":
                 raise forms.ValidationError(
@@ -225,7 +222,7 @@ class DomServerContestCreatForm(forms.Form):
     def clean_end_time(self):
         end_time = self.cleaned_data.get("end_time")
 
-        if self.validate_time_format(end_time):
+        if validate_time_format(time_string=end_time):
             if hasattr(self, "parsed_datetime"):
                 if end_time[0] != "+":
                     raise forms.ValidationError(
@@ -253,7 +250,7 @@ class DomServerContestCreatForm(forms.Form):
             self.parsed_scoreboard_unfreeze_time = self.parsed_end
             return scoreboard_unfreeze_time
 
-        if self.validate_time_format(scoreboard_unfreeze_time):
+        if validate_time_format(time_string=scoreboard_unfreeze_time):
             if hasattr(self, "parsed_end"):
                 if scoreboard_unfreeze_time[0] == "+":
                     hours, minutes, seconds = map(
@@ -289,7 +286,7 @@ class DomServerContestCreatForm(forms.Form):
             self.parsed_deactivate_time = self.parsed_scoreboard_unfreeze_time
             return deactivate_time
 
-        if self.validate_time_format(deactivate_time):
+        if validate_time_format(time_string=deactivate_time):
             if hasattr(self, "parsed_scoreboard_unfreeze_time"):
                 if deactivate_time[0] == "+":
                     hours, minutes, seconds = map(int, deactivate_time[1:].split(":"))
@@ -322,7 +319,7 @@ class DomServerContestCreatForm(forms.Form):
     # def clean_duration(self):
     #     duration = self.cleaned_data.get("duration")
 
-    #     if self.validate_time_format(duration):
+    #     if validate_time_format(time_string=duration):
     #         return duration
     #     else:
     #         raise forms.ValidationError(("%(time)s 格式錯誤 請提供有效的持續時間格式（例如：+2:00:00）"), code="invalid", params={"time": duration})

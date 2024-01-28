@@ -52,22 +52,22 @@ urlpatterns = [
     path("contests-list/", contests_list_view, name="contests_list"),
     path("contest/create/", contest_create_view, name="contest_create"),
     path(
-        "contest-problem/create",
+        "contest-problem/create/",
         contest_problem_create_view,
         name="contest_problem_create",
     ),
     path(
-        "contest/<name>/<id>/edit",
+        "contest/<name>/<id>/edit/",
         contest_information_edit_view,
         name="contest_information_edit",
     ),
     path(
-        "contest/<name>/<id>/upload/edit",
+        "contest/<name>/<id>/upload/edit/",
         contest_problem_upload_edit_view,
         name="contest_problem_upload_edit",
     ),
     path(
-        "contest/<name>/<id>/copy",
+        "contest/<id>/<cid>/copy/",
         contest_problem_copy_view,
         name="contest_information_copy",
     ),

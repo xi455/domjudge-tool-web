@@ -1,6 +1,7 @@
 import hashlib
 
-from app.problems.crawler import ProblemCrawler
+# from app.problems.crawler import ProblemCrawler
+from utils.crawler import ProblemCrawler
 
 
 class DomjudgeUser:

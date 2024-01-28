@@ -47,4 +47,4 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
             "server_client_name": obj.name,
         }
 
-        return render(request, "admin/get_contests.html", context)
+        return render(request, "contest_list.html", context)
