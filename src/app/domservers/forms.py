@@ -44,6 +44,16 @@ class DomServerContestCreatForm(forms.Form):
     parsed_scoreboard_freeze_length = None
     parsed_scoreboard_unfreeze_time = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # 在這裡設置 your_boolean_field 的初始值
+        self.fields["start_time_enabled"].initial = False
+        self.fields["process_balloons"].initial = False
+        self.fields["open_to_all_teams"].initial = False
+        self.fields["contest_visible_on_public_scoreboard"].initial = False
+        self.fields["enabled"].initial = False
+
     name = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
         required=True,
@@ -84,51 +94,51 @@ class DomServerContestCreatForm(forms.Form):
         required=False,
     )
     start_time_enabled = forms.BooleanField(
-        widget=forms.TextInput(
+        widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
                 "type": "checkbox",
-                "checked": "checked",
+                # "checked": "checked",
             }
         ),
         required=False,
     )
     process_balloons = forms.BooleanField(
-        widget=forms.TextInput(
+        widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
                 "type": "checkbox",
-                "checked": "checked",
+                # "checked": "checked",
             }
         ),
         required=False,
     )
     open_to_all_teams = forms.BooleanField(
-        widget=forms.TextInput(
+        widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
                 "type": "checkbox",
-                "checked": "checked",
+                # "checked": "checked",
             }
         ),
         required=False,
     )
     contest_visible_on_public_scoreboard = forms.BooleanField(
-        widget=forms.TextInput(
+        widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
                 "type": "checkbox",
-                "checked": "checked",
+                # "checked": "checked",
             }
         ),
         required=False,
     )
     enabled = forms.BooleanField(
-        widget=forms.TextInput(
+        widget=forms.CheckboxInput(
             attrs={
                 "class": "form-check-input",
                 "type": "checkbox",
-                "checked": "checked",
+                # "checked": "checked",
             }
         ),
         required=False,

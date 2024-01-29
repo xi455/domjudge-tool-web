@@ -57,12 +57,12 @@ urlpatterns = [
         name="contest_problem_create",
     ),
     path(
-        "contest/<name>/<id>/edit/",
+        "contest/<id>/<cid>/edit/",
         contest_information_edit_view,
         name="contest_information_edit",
     ),
     path(
-        "contest/<name>/<id>/upload/edit/",
+        "contest/<id>/<cid>/upload/edit/",
         contest_problem_upload_edit_view,
         name="contest_problem_upload_edit",
     ),

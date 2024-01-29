@@ -243,6 +243,56 @@ class ProblemCrawler:
 
         return is_succeed, problem_id_list, contest_id
 
+    def problem_format_process(self, problem_data):
+        problem_information = dict()
+        for count in range(len(problem_data)):
+            problem_information.update(
+                {
+                    f"contest[problems][{count}][shortname]": problem_data[count].get(
+                        "name"
+                    ),
+                    f"contest[problems][{count}][points]": "1",
+                    f"contest[problems][{count}][color]": "",
+                }
+            )
+
+        for count in range(len(problem_data)):
+            problem_information.update(
+                {
+                    f"contest[problems][{count}][problem]": problem_data[count].get(
+                        "id"
+                    ),
+                    f"contest[problems][{count}][allowSubmit]": "1",
+                    f"contest[problems][{count}][allowJudge]": "1",
+                    f"contest[problems][{count}][lazyEvalResults]": "0",
+                }
+            )
+
+        return problem_information
+
+    def contest_format_process(self, contest_data):
+        contest_information = {
+            "contest[shortname]": contest_data.get("short_name"),
+            "contest[name]": contest_data.get("name"),
+            "contest[activatetimeString]": contest_data.get("activate_time"),
+            "contest[starttimeString]": contest_data.get("start_time"),
+            "contest[starttimeEnabled]": contest_data.get("start_time_enabled"),
+            "contest[freezetimeString]": contest_data.get("scoreboard_freeze_length"),
+            "contest[endtimeString]": contest_data.get("end_time"),
+            "contest[unfreezetimeString]": contest_data.get("scoreboard_unfreeze_time"),
+            "contest[deactivatetimeString]": contest_data.get("deactivate_time"),
+            "contest[processBalloons]": contest_data.get("process_balloons"),
+            "contest[public]": contest_data.get("contest_visible_on_public_scoreboard"),
+            "contest[openToAllTeams]": contest_data.get("open_to_all_teams"),
+            "contest[enabled]": contest_data.get("enabled"),
+        }
+
+        for key, value in contest_information.items():
+            if value and isinstance(value, bool):
+                contest_information[key] = "1"
+
+        return contest_information
+
     def get_contest_problem_count(self, contest_id):
         page = self.session.get(
             self.url + ConTestPath.GET_SINGLE_EDIT.format(contest_id)
@@ -258,6 +308,8 @@ class ProblemCrawler:
             tr_elements_length = len(tbody.select("tr"))
 
             return tr_elements_length
+
+        return 0
 
     def get_contests_list_all(self):
         page = self.session.get(self.url + ConTestPath.GET)
@@ -309,16 +361,15 @@ class ProblemCrawler:
             data=create_contest_information,
             headers=headers,
         )
-        print(page.text)
 
-        if "Error" in page.text:
-            print("the upload is ", False)
+        soup = BeautifulSoup(page.text, "html.parser")
+        error_elements = soup.select_one(".form-error-message")
+        if error_elements:
             return False
         else:
-            print("the upload is ", True)
             return True
 
-    def contest_problem_update(self, contest_id, contest_data_dict):
+    def contest_info_update(self, contest_id, contest_data_dict):
 
         # return the bool to see if it succeeded.
 
@@ -334,7 +385,12 @@ class ProblemCrawler:
             data=contest_data_dict,
         )
 
-        if "Error" in page.text:
+        soup = BeautifulSoup(page.text, "html.parser")
+        error_elements = soup.select_one(".form-error-message")
+
+        print(soup)
+        print("error_elements:", error_elements)
+        if error_elements:
             return False
         else:
             return True
@@ -399,8 +455,10 @@ class ProblemCrawler:
 
         del contest_problem_info_dict["contest[teams][]"]
         del contest_problem_info_dict["contest[teamCategories][]"]
+        del contest_problem_info_dict["contest[save]"]
 
         contest_problem_info_dict.update(problem_data)
+        contest_problem_info_dict["contest[save]"] = ""
 
         for key, value in contest_problem_info_dict.items():
             print(key, value, type(value))
@@ -412,8 +470,10 @@ class ProblemCrawler:
 
         soup = BeautifulSoup(page.text, "html.parser")
         error_elements = soup.select_one(".form-error-message")
-
-        return error_elements
+        if error_elements:
+            return False
+        else:
+            return True
 
     def get_testcases_all(self, problem_id):
         page = self.session.get(self.url + TestCasePath.GET.format(problem_id))

@@ -1,3 +1,3 @@
-function back() {
+function page_back() {
     History.back()
   }

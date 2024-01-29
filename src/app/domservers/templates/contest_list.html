@@ -28,7 +28,7 @@ delete-confirmation{%endblock %}
         <div class="card-header with-border">
             <h4 class="card-title">
             考區內容
-            </h4>
+            </h4>            
         </div>
 
         <div class="card-body">
@@ -64,9 +64,9 @@ delete-confirmation{%endblock %}
                                 <td>未開放</td>
                                 {% endif %}
                                 <td>
-                                <a href="{% url 'contest_information_copy' server_client_name object.CID %}"
+                                <a href="{% url 'contest_information_copy' server_client_id object.CID %}"
                                     class="btn btn-primary btn-sm">複製</a>
-                                <a href="{% url 'contest_information_edit' server_client_name object.CID %}"
+                                <a href="{% url 'contest_information_edit' server_client_id object.CID %}"
                                     class="btn btn-outline-primary btn-sm">編輯</a>
                                 </td>
                             </tr>
@@ -83,11 +83,11 @@ delete-confirmation{%endblock %}
                     <div class="col-12 col-sm-3 mt-auto">
                     <form method="get" action="{% url 'contest_create' %}">
                         <div class="form-group">
-                        <input type="hidden" name="server_client_name" value="{{server_client_name}}">
+                        <input type="hidden" name="server_client_id" value="{{server_client_id}}">
                         <button type="submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control">新增考區</button>
                         </div>
                         <div class="form-group">
-                        <button type="button" onclick="back()"
+                        <button type="button" onclick="page_back()"
                             class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
                             返回
                         </button>

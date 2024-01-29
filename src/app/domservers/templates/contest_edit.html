@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls static jazzmin %}
+{% load static %}
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
 
 {% block extrahead %}
@@ -41,7 +42,7 @@ delete-confirmation{%endblock %}
                 <div id="content-main">
 
                     {{ form.non_field_errors }}
-                    <form action="{% url 'contest_information_edit' client_name contest_id %}" class="needs-validation" novalidate method="post">
+                    <form action="{% url 'contest_information_edit' client_id contest_id %}" class="needs-validation" novalidate method="post">
                         {% csrf_token %}
                         <div class="row">
                             <div class="col-12 col-sm-9">
@@ -162,7 +163,7 @@ delete-confirmation{%endblock %}
                                 </div>
 
                                 <div class="form-group">
-                                    <button onclick="back()" type="button"
+                                    <button onclick="page_back()" type="button"
                                         class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link w-100">
                                         返回
                                     </button>
@@ -175,31 +176,7 @@ delete-confirmation{%endblock %}
         </div>
     </div>
 </div>
-
-<script>
-    function back() {
-        window.history.back()
-    }
-
-    (() => {
-        'use strict'
-
-        // Fetch all the forms we want to apply custom Bootstrap validation styles to
-        const forms = document.querySelectorAll('.needs-validation')
-
-        // Loop over them and prevent submission
-        Array.from(forms).forEach(form => {
-            form.addEventListener('submit', event => {
-                if (!form.checkValidity()) {
-                    event.preventDefault()
-                    event.stopPropagation()
-                }
-
-                form.classList.add('was-validated')
-
-            }, false)
-        })
-    })()
-</script>
+<script src="{% static 'js/page_back.js' %}"></script>
+<script src="{% static 'js/bootstrap_form_validation.js' %}"></script>
 
 {% endblock %}
