@@ -153,7 +153,7 @@ delete-confirmation{%endblock %}
               </div>
 
               <div class="form-group">
-                <button type="button" onclick="page_back()" class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link w-100">
+                <button type="button" onclick="history.back()" class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link w-100">
                   返回
                 </button>
               </div>
@@ -166,7 +166,6 @@ delete-confirmation{%endblock %}
 </div>
 </div>
 
-<script src="{% static 'js/page_back.js' %}"></script>
 <script src="{% static 'js/bootstrap_form_validation.js' %}"></script>
 
 {% endblock %}

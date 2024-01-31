@@ -22,8 +22,9 @@ from app.domservers.views import (
     contest_create_view,
     contest_information_edit_view,
     contest_problem_copy_view,
-    contest_problem_create_view,
+    contest_problem_process_view,
     contest_problem_upload_edit_view,
+    create_contest_problem_shortname_view,
 )
 from app.problems.views import contests_list_view, problem_contest_view, problem_view
 from app.users import views as user_views
@@ -52,8 +53,13 @@ urlpatterns = [
     path("contests-list/", contests_list_view, name="contests_list"),
     path("contest/create/", contest_create_view, name="contest_create"),
     path(
+        "contest-problem/process/",
+        contest_problem_process_view,
+        name="contest_problem_process",
+    ),
+    path(
         "contest-problem/create/",
-        contest_problem_create_view,
+        create_contest_problem_shortname_view,
         name="contest_problem_create",
     ),
     path(

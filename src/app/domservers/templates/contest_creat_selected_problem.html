@@ -34,7 +34,7 @@ delete-confirmation{%endblock %}
 
             <div class="card-body">
                 <div id="content-main">
-                    <form action="{% url 'contest_problem_create' %}" method="post">
+                    <form action="{% url 'contest_problem_process' %}" method="post">
                         {% csrf_token %}
                         client_name:{{client_id}}
                         <input type="hidden" name="client_id" value="{{client_id}}">
@@ -74,7 +74,7 @@ delete-confirmation{%endblock %}
                                 </div>
 
                                 <div class="form-group">
-                                    <button onclick="page_back()" type="button"
+                                    <button onclick="history.back()" type="button"
                                         class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
                                         返回
                                     </button>
@@ -86,8 +86,6 @@ delete-confirmation{%endblock %}
             </div>
         </div>
     </div>
-
-    <script src="{% static 'js/page_back.js' %}"></script>
 
     <script>
         let select_all = document.querySelector("#selectAll")
@@ -102,7 +100,7 @@ delete-confirmation{%endblock %}
         });
 
         function getSelectedCheckboxes() {
-            // 获取所有选中的复选框的值
+            // 獲取所有選中的复選框的值
             let checkboxes = document.querySelectorAll('input[name="checkboxGroup"]:checked');
             let selectedCheckboxes = Array.from(checkboxes).map(function (checkbox) {
                 let parts = checkbox.value.split(':');

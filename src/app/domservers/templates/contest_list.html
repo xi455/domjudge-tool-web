@@ -87,7 +87,7 @@ delete-confirmation{%endblock %}
                         <button type="submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control">新增考區</button>
                         </div>
                         <div class="form-group">
-                        <button type="button" onclick="page_back()"
+                        <button type="button" onclick="history.back()"
                             class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
                             返回
                         </button>
@@ -100,6 +100,5 @@ delete-confirmation{%endblock %}
     </div>
 </div>
 
-<script src="{% static 'js/page_back.js' %}"></script>
 
 {% endblock %}

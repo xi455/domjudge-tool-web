@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls static jazzmin %}
+{% load static %}
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
 
 {% block extrahead %}
@@ -18,20 +19,17 @@ delete-confirmation{%endblock %}
 {% endblock %}
 
 {% block content_title %}
-選擇題目
+更改題目簡稱
 {% endblock %}
 {% block content %}
 
 <div class="col-12">
     {{contest_data_json}}
-    {% if process %}
-    <div class="card card-danger card-outline">
-        {% else %}
+    {{selected_problem_data_json}}
         <div class="card card-primary card-outline">
-            {% endif %}
             <div class="card-header with-border">
                 <h4 class="card-title">
-                    選擇放入考區的題目
+                    修改考區的題目簡稱
                 </h4>
             </div>
 
@@ -39,8 +37,8 @@ delete-confirmation{%endblock %}
                 <div id="content-main">
                     <form action="{% url 'contest_problem_create' %}" method="post">
                         {% csrf_token %}
-                        client_name:{{client_name}}
-                        <input type="hidden" name="client_name" value="{{client_name}}">
+                        client_name:{{client_id}}
+                        <input type="hidden" name="client_id" value="{{client_id}}">
                         <div class="row">
                             <div class="col-12 col-sm-9">
                                 <div class="form-check w-100">
@@ -70,14 +68,14 @@ delete-confirmation{%endblock %}
                                 <input type="hidden" name="contestDataJson" id="contestHidden">
                                 <input type="hidden" name="selectedCheckboxes" id="checkboxHidden">
                                 <div class="form-group">
-                                    <button onclick="getSelectedCheckboxes()" type="button"
+                                    <button onclick="" type="button"
                                         class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
                                         創建考區
                                     </button>
                                 </div>
 
                                 <div class="form-group">
-                                    <button onclick="back()" type="button"
+                                    <button onclick="" type="button"
                                         class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
                                         返回
                                     </button>
@@ -89,42 +87,5 @@ delete-confirmation{%endblock %}
             </div>
         </div>
     </div>
-
-    <script>
-        function back() {
-            window.history.back()
-        }
-
-        let select_all = document.querySelector("#selectAll")
-        select_all.addEventListener("change", function () {
-            // 獲取所有其他複選框
-            let checkboxes = document.querySelectorAll(".form-check-input");
-
-            // 將所有其他複選框的狀態設置為與全選框相同
-            checkboxes.forEach(function (checkbox) {
-                checkbox.checked = document.getElementById("selectAll").checked;
-            });
-        });
-
-        function getSelectedCheckboxes() {
-            // 获取所有选中的复选框的值
-            let checkboxes = document.querySelectorAll('input[name="checkboxGroup"]:checked');
-            let selectedCheckboxes = Array.from(checkboxes).map(function (checkbox) {
-                let parts = checkbox.value.split(':');
-                return {
-                    name: parts[0],
-                    id: parts[1]
-                };
-            });
-            let checkboxHidden = document.querySelector("#checkboxHidden");
-            let contestHidden = document.querySelector("#contestHidden");
-            let form = document.querySelector("form[method='post']");
-
-            checkboxHidden.value = JSON.stringify(selectedCheckboxes);
-            contestHidden.value = "{{ contest_data_json|escapejs }}";
-
-            form.submit();
-        }
-    </script>
 
     {% endblock %}

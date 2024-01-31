@@ -48,7 +48,7 @@ def contest_create_view(request):
                 "problem_data_dict": problem_data_dict,
             }
 
-            return render(request, "contest_selected_problem.html", context)
+            return render(request, "contest_creat_selected_problem.html", context)
 
     if request.method == "GET":
         initial_data = {
@@ -73,81 +73,76 @@ def contest_create_view(request):
     return render(request, "contest_create.html", context)
 
 
-def contest_problem_process(contest_data: dict, selected_problem: dict):
-    contest_information = {
-        "contest[shortname]": contest_data.get("short_name"),
-        "contest[name]": contest_data.get("name"),
-        "contest[activatetimeString]": contest_data.get("activate_time"),
-        "contest[starttimeString]": contest_data.get("start_time"),
-        "contest[starttimeEnabled]": contest_data.get("start_time_enabled"),
-        "contest[freezetimeString]": contest_data.get("scoreboard_freeze_length"),
-        "contest[endtimeString]": contest_data.get("end_time"),
-        "contest[unfreezetimeString]": contest_data.get("scoreboard_unfreeze_time"),
-        "contest[deactivatetimeString]": contest_data.get("deactivate_time"),
-        "contest[processBalloons]": contest_data.get("process_balloons"),
-        "contest[public]": contest_data.get("contest_visible_on_public_scoreboard"),
-        "contest[openToAllTeams]": contest_data.get("open_to_all_teams"),
-        "contest[enabled]": contest_data.get("enabled"),
-    }
-
-    for key, value in contest_information.items():
-        if value and isinstance(value, bool):
-            contest_information[key] = "1"
-
-    problem_information = dict()
-    for count in range(len(selected_problem)):
-        problem_information.update(
-            {
-                f"contest[problems][{count}][problem]": selected_problem[count].get(
-                    "id"
-                ),
-                f"contest[problems][{count}][shortname]": selected_problem[count].get(
-                    "name"
-                ),
-                f"contest[problems][{count}][points]": "1",
-                f"contest[problems][{count}][allowSubmit]": "1",
-                f"contest[problems][{count}][allowJudge]": "1",
-                f"contest[problems][{count}][color]": "",
-                f"contest[problems][{count}][lazyEvalResults]": "0",
-            }
-        )
-    problem_information.update({"contest[save]": ""})
-
-    create_contest_information = contest_information
-    create_contest_information.update(problem_information)
-
-    return create_contest_information
-
-
-def contest_problem_create_view(request):
-    client_id = request.POST.get("client_id")
-    contest_data = json.loads(request.POST.get("contestDataJson"))
-    selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
-
-    create_contest_information = contest_problem_process(
-        contest_data=contest_data, selected_problem=selected_problem
-    )
-
-    client_obj = DomServerClient.objects.get(id=client_id)
-
+def create_contest_problem_shortname_view(request, id):
+    client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
-    create_response_bool = problem_crawler.contest_and_problem_create(
-        create_contest_information=create_contest_information
-    )
 
-    if create_response_bool:
-        messages.success(request, "考區創建成功！！")
-    else:
-        messages.error(request, "考區創建失敗！！")
+    if request.method == "POST":
+        print("the method is a post.")
 
-    contest_dicts = problem_crawler.get_contest_all()
+        context = {
+            "client_id": client_obj.id,
+        }
+        return render(request, "contest_problem_edit_shortname.html", context)
+
+    if request.method == "GET":
+        print("the method is a GET.")
 
     context = {
-        "contest_dicts": contest_dicts,
-        "server_client_id": client_id,
+        # "client_id": client_obj.id,
+        # "contest_id": cid,
+        # "form": form,
     }
 
-    return render(request, "contest_list.html", context)
+    return render(request, "contest_problem_edit_shortname.html", context)
+
+
+@require_http_methods(["POST"])
+def contest_problem_process_view(request):
+    client_id = request.POST.get("client_id")
+    contest_data = json.loads(request.POST.get("contestDataJson"))
+    selected_problem_dict = json.loads(request.POST.get("selectedCheckboxes"))
+
+    client_obj = DomServerClient.objects.get(id=client_id)
+    problem_crawler = create_problem_crawler(client_obj)
+
+    contest_information = problem_crawler.contest_format_process(contest_data=contest_data)
+    problem_information = problem_crawler.problem_format_process(problem_data=selected_problem_dict)
+
+    contest_information.update(problem_information)
+    contest_information.update({"contest[save]": ""})
+    create_information = contest_information
+
+    # test------------------------
+    create_data_json = json.dumps(create_information)
+    print("selected_problem_dict:", selected_problem_dict)
+
+    context = {
+        "server_client_id": client_id,
+        "create_data_json": create_data_json,
+        "selected_problem_dict": selected_problem_dict,
+    }
+
+    return render(request, "contest_problem_shortname_create.html", context)
+    # test end------------------------
+
+    # create_response = problem_crawler.contest_and_problem_create(
+    #     create_contest_information=create_information
+    # )
+
+    # if create_response:
+    #     messages.success(request, "考區創建成功！！")
+    # else:
+    #     messages.error(request, "考區創建失敗！！")
+
+    # contest_dicts = problem_crawler.get_contest_all()
+
+    # context = {
+    #     "contest_dicts": contest_dicts,
+    #     "server_client_id": client_id,
+    # }
+
+    # return render(request, "contest_list.html", context)
 
 
 def contest_initial_data_format(initial_data: dict):
@@ -190,15 +185,12 @@ def contest_information_edit_view(request, id, cid):
             print("the form is a success.")
             contest_update_data = form.cleaned_data
 
-            print("contest_update_data:", contest_update_data)
-            print()
             for key, value in contest_update_data.items():
                 if isinstance(value, bool):
                     if value:
                         contest_update_data[key] = "1"
                     else:
                         contest_update_data[key] = "0"
-            print("contest_update_data:", contest_update_data)
 
             # get the all problem
             problem_data_dict = problem_crawler.get_problems()
@@ -223,7 +215,7 @@ def contest_information_edit_view(request, id, cid):
                 "existing_problem_id_list": existing_problem_id_list,
                 "problem_data_dict": problem_data_dict,
             }
-            return render(request, "admin/contest_selected_problem_edit.html", context)
+            return render(request, "contest_edit_selected_problem.html", context)
 
     if request.method == "GET":
         print("the method is a GET.")
@@ -288,7 +280,6 @@ def contest_info_update_process(problem_crawler, contest_data, cid):
         contest_id=cid, contest_data_dict=contest_update_information
     )
 
-    print(update_response)
     return update_response
 
 

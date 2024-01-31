@@ -59,6 +59,7 @@ class ProblemPath(str, Enum):
 
 class ConTestPath(str, Enum):
     GET = "/jury/contests"
+    GET_PROBLEM = "/jury/contests/{}"
     GET_SINGLE = "/jury/contests/{}"
     GET_SINGLE_EDIT = "/jury/contests/{}/edit"
     POST = "/jury/contests/add"
@@ -177,14 +178,11 @@ class ProblemCrawler:
             contest_details = ContestInfo(**contest_info_dict)
             contests_detail_dict[contest_short_name] = contest_details
 
-        # for key, value in contests_detail_dict.items():
-        #     print(key, value)
-
         return contests_detail_dict
 
     def get_problems(self):
 
-        # get domjudge all problem information return dict type
+        # get domjudge all problem information return class type
         # example: {problem_name: class(id=problem_id, name=problem_name)}
 
         page = self.session.post(self.url + ProblemPath.GET)
@@ -288,8 +286,11 @@ class ProblemCrawler:
         }
 
         for key, value in contest_information.items():
-            if value and isinstance(value, bool):
+            if value is True:
                 contest_information[key] = "1"
+                
+            if value is False:
+                contest_information[key] = "0"
 
         return contest_information
 
@@ -363,6 +364,7 @@ class ProblemCrawler:
         )
 
         soup = BeautifulSoup(page.text, "html.parser")
+        print(soup)
         error_elements = soup.select_one(".form-error-message")
         if error_elements:
             return False
