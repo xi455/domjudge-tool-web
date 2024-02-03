@@ -19,7 +19,7 @@ delete-confirmation{%endblock %}
 {% endblock %}
 
 {% block content_title %}
-創建題目簡稱
+修改題目簡稱
 {% endblock %}
 {% block content %}
 
@@ -27,17 +27,17 @@ delete-confirmation{%endblock %}
         <div class="card card-primary card-outline">
             <div class="card-header with-border">
                 <h4 class="card-title">
-                    創建考區的題目簡稱
+                    修改考區的題目簡稱
                 </h4>
             </div>
 
             <div class="card-body">
                 <div id="content-main">
-                    <form action="{% url 'contest_problem_create' server_client_id %}" method="post">
+                    <form action="{% url 'contest_problem_shortname_edit' server_client_id contest_id %}" method="post">
                         {% csrf_token %}
                         server_client_id:{{server_client_id}}
                         selected_problem_dict:{{selected_problem_dict}}
-                        <input type="hidden" name="server_client_id" value="{{server_client_id}}">
+                        <!-- <input type="hidden" name="server_client_id" value="{{server_client_id}}"> -->
                         <input type="hidden" name="contest_data_json" value="{{create_data_json}}">
                         <input type="hidden" name="shortNameHidden" id="shortNameHidden">
                         <div class="row">
@@ -45,7 +45,7 @@ delete-confirmation{%endblock %}
                             <div class="col-12 col-sm-9">
                                 <div class="mb-3">
                                 <label for="{{data.id}}" class="form-label">{{data.name}}</label>
-                                <input type="text" class="form-control" id="{{data.id}}" name="{{data.name}}" aria-describedby="{{data.name}}lHelp" placeholder="settings shortname">                                
+                                <input type="text" class="form-control" id="{{data.id}}" name="{{data.name}}" value="{{data.shortname}}" aria-describedby="{{data.name}}lHelp" placeholder="settings shortname">                                
                                 </div>
                             </div>
                             {% endfor %}
@@ -53,7 +53,7 @@ delete-confirmation{%endblock %}
                             <div class="col-12 col-sm-3 mt-auto">                                
                                 <div class="form-group">
                                     <button onclick="getFormValue()" type="button" class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
-                                        創建考區
+                                        修改考區
                                     </button>
                                 </div>
 

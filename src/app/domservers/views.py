@@ -73,32 +73,58 @@ def contest_create_view(request):
     return render(request, "contest_create.html", context)
 
 
-def create_contest_problem_shortname_view(request, id):
-    client_obj = DomServerClient.objects.get(id=id)
-    problem_crawler = create_problem_crawler(client_obj)
+def contest_problem_shortname_process(form_data):
 
-    if request.method == "POST":
-        print("the method is a post.")
+    # get the information of the contest area and problem shortname,
+    # organize and return the information of the entire contest area.
 
-        context = {
-            "client_id": client_obj.id,
-        }
-        return render(request, "contest_problem_edit_shortname.html", context)
+    contest_info = json.loads(form_data.get("contest_data_json"))
+    problem_info = json.loads(form_data.get("shortNameHidden"))
 
-    if request.method == "GET":
-        print("the method is a GET.")
+    contest_info_dict = dict()
+    for key, value in contest_info.items():
+        if key[21:-1] == "problem":
+            contest_info_dict[value] = key[18:19]
 
-    context = {
-        # "client_id": client_obj.id,
-        # "contest_id": cid,
-        # "form": form,
-    }
+    for data in problem_info:
+        problem_shortname = (
+            f'contest[problems][{contest_info_dict[data["id"]]}][shortname]'
+        )
+        contest_info[problem_shortname] = data["shortname"]
 
-    return render(request, "contest_problem_edit_shortname.html", context)
+    return contest_info
 
 
 @require_http_methods(["POST"])
-def contest_problem_process_view(request):
+def contest_problem_upload_view(request, id):
+    form_data = request.POST
+    create_contest_info = contest_problem_shortname_process(form_data=form_data)
+
+    client_obj = DomServerClient.objects.get(id=id)
+    problem_crawler = create_problem_crawler(client_obj)
+
+    create_response = problem_crawler.contest_and_problem_create(
+        create_contest_information=create_contest_info
+    )
+
+    if create_response:
+        messages.success(request, "考區創建成功！！")
+    else:
+        messages.error(request, "考區創建失敗！！")
+
+    # get all contest
+    contest_dicts = problem_crawler.get_contest_all()
+
+    context = {
+        "contest_dicts": contest_dicts,
+        "server_client_id": client_obj.id,
+    }
+
+    return render(request, "contest_list.html", context)
+
+
+@require_http_methods(["POST"])
+def contest_problem_shortname_create_view(request):
     client_id = request.POST.get("client_id")
     contest_data = json.loads(request.POST.get("contestDataJson"))
     selected_problem_dict = json.loads(request.POST.get("selectedCheckboxes"))
@@ -106,16 +132,18 @@ def contest_problem_process_view(request):
     client_obj = DomServerClient.objects.get(id=client_id)
     problem_crawler = create_problem_crawler(client_obj)
 
-    contest_information = problem_crawler.contest_format_process(contest_data=contest_data)
-    problem_information = problem_crawler.problem_format_process(problem_data=selected_problem_dict)
+    contest_information = problem_crawler.contest_format_process(
+        contest_data=contest_data
+    )
+    problem_information = problem_crawler.problem_format_process(
+        problem_data=selected_problem_dict
+    )
 
     contest_information.update(problem_information)
     contest_information.update({"contest[save]": ""})
     create_information = contest_information
 
-    # test------------------------
     create_data_json = json.dumps(create_information)
-    print("selected_problem_dict:", selected_problem_dict)
 
     context = {
         "server_client_id": client_id,
@@ -124,25 +152,6 @@ def contest_problem_process_view(request):
     }
 
     return render(request, "contest_problem_shortname_create.html", context)
-    # test end------------------------
-
-    # create_response = problem_crawler.contest_and_problem_create(
-    #     create_contest_information=create_information
-    # )
-
-    # if create_response:
-    #     messages.success(request, "考區創建成功！！")
-    # else:
-    #     messages.error(request, "考區創建失敗！！")
-
-    # contest_dicts = problem_crawler.get_contest_all()
-
-    # context = {
-    #     "contest_dicts": contest_dicts,
-    #     "server_client_id": client_id,
-    # }
-
-    # return render(request, "contest_list.html", context)
 
 
 def contest_initial_data_format(initial_data: dict):
@@ -171,18 +180,13 @@ def contest_initial_data_format(initial_data: dict):
 
 
 def contest_information_edit_view(request, id, cid):
-
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
 
     if request.method == "POST":
-        print("the method is a post.")
-
-        print("data:", request.POST)
         form = DomServerContestCreatForm(request.POST)
 
         if form.is_valid():
-            print("the form is a success.")
             contest_update_data = form.cleaned_data
 
             for key, value in contest_update_data.items():
@@ -218,8 +222,8 @@ def contest_information_edit_view(request, id, cid):
             return render(request, "contest_edit_selected_problem.html", context)
 
     if request.method == "GET":
-        print("the method is a GET.")
 
+        # Get contest information
         (contest_info_response) = problem_crawler.get_contest_or_problem_information(
             contest_id=cid, need_content="contest"
         )
@@ -255,7 +259,8 @@ def contest_information_edit_view(request, id, cid):
             if contest_info_response["contest[enabled]"] == "1"
             else False,
         }
-        # print("initial_data:", initial_data)
+        
+        # Unified contest information format
         initial_data = contest_initial_data_format(initial_data=initial_data)
 
         form = DomServerContestCreatForm(initial=initial_data)
@@ -269,76 +274,26 @@ def contest_information_edit_view(request, id, cid):
     return render(request, "contest_edit.html", context)
 
 
-def contest_info_update_process(problem_crawler, contest_data, cid):
-
-    # Returns whether the contest editor is successful or not
-
-    contest_update_information = problem_crawler.contest_format_process(
-        contest_data=contest_data
-    )
-    update_response = problem_crawler.contest_info_update(
-        contest_id=cid, contest_data_dict=contest_update_information
-    )
-
-    return update_response
-
-
-def problem_info_update_process(problem_crawler, selected_problem, cid):
-
-    # Returns whether the problem editor was successful or not
-
-    old_problem_information = problem_crawler.get_contest_or_problem_information(
-        contest_id=cid, need_content="problem"
-    )
-
-    problem_need_delete = old_problem_information
-
-    if problem_need_delete:
-        problem_need_delete_id = [
-            value for key, value in problem_need_delete.items() if "[problem]" in key
-        ]
-
-        for problem_id in problem_need_delete_id:
-            problem_crawler.delete_contest_problem(
-                contest_id=cid, web_problem_id=problem_id
-            )
-
-    problem_upload_information = problem_crawler.problem_format_process(
-        problem_data=selected_problem
-    )
-
-    upload_response = problem_crawler.contest_problem_upload(
-        contest_id=cid, problem_data=problem_upload_information
-    )
-
-    return upload_response
-
-
-def contest_problem_upload_edit_view(request, id, cid):
-    contest_data = json.loads(request.POST.get("contestDataJson"))
-    selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
-
+def contest_problem_shortname_edit_view(request, id, cid):
+    form_data = request.POST
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
 
-    contest_update_response = contest_info_update_process(
-        problem_crawler=problem_crawler, contest_data=contest_data, cid=cid
-    )
+    # Get the latest contest area information
+    contest_info = contest_problem_shortname_process(form_data=form_data)
 
-    if contest_update_response:
+    # Delete the problem information in the old contest area
+    old_problem_info_remove_process(problem_crawler=problem_crawler, cid=cid)
+
+    # Update contest information
+    upload_response = problem_crawler.contest_problem_upload(contest_id=cid, problem_data=contest_info)
+
+    if upload_response:
         messages.success(request, "考區編輯成功！！")
     else:
         messages.error(request, "考區編輯失敗！！")
-
-    problem_upload_response = problem_info_update_process(
-        problem_crawler=problem_crawler, selected_problem=selected_problem, cid=cid
-    )
-
-    if problem_upload_response:
-        messages.success(request, "考區題目編輯成功！！")
-    else:
-        messages.error(request, "考區題目編輯失敗！！")
-
+        
+    # get all contest
     contest_dicts = problem_crawler.get_contest_all()
 
     context = {
@@ -348,29 +303,144 @@ def contest_problem_upload_edit_view(request, id, cid):
 
     return render(request, "contest_list.html", context)
 
+def old_problem_info_remove_process(problem_crawler, cid):
+
+    # The old competition question information will be deleted
+    # (applicable to competition information changes)
+
+    try:
+        old_problem_information = problem_crawler.get_contest_or_problem_information(
+            contest_id=cid, need_content="problem"
+        )
+
+        problem_need_delete = old_problem_information
+
+        if problem_need_delete:
+            problem_need_delete_id = [
+                value for key, value in problem_need_delete.items() if "[problem]" in key
+            ]
+
+            for problem_id in problem_need_delete_id:
+                problem_crawler.delete_contest_problem(
+                    contest_id=cid, web_problem_id=problem_id
+                )
+
+    except:
+        assert False, "移除舊題目資訊時發現錯誤"
+
+def contest_problem_selected_shortname_process(old_problem_info_dict, selected_problem):
+    
+    # Return the id, name, shortname information of the problem
+    # example: [{'name': 'Hello World', 'id': '1', 'shortname': 'Hello World test'}]
+
+    old_problem_info_keys = old_problem_info_dict.keys()
+    for data in selected_problem:
+        if data["id"] in old_problem_info_keys:
+            data["shortname"] = old_problem_info_dict[data.get("id")]
+        else:
+            data["shortname"] = data.get("name")
+
+    return selected_problem
+
+
+def contest_problem_information_update_process(
+    problem_information, old_problem_information, selected_problem
+):
+    
+    # Get the shortname of the old problem information
+    # Replace the shortname of the current problem information
+    # Reture problem information and selected_problem
+
+    # old_problem_info_dict example: {'3': 'test'}
+    # old_problem_info_dict format problem_id: problem_shortname
+
+    old_problem_info_dict = dict()
+    for key, value in old_problem_information.items():
+        if key[21:-1] == "problem":
+            problem_shortname = f"contest[problems][{key[18:19]}][shortname]"
+            old_problem_info_dict[value] = old_problem_information[problem_shortname]
+
+    for key, value in problem_information.items():
+        if key[21:-1] == "problem" and value in old_problem_info_dict.keys():
+            problem_shortname = f"contest[problems][{key[18:19]}][shortname]"
+            problem_information[problem_shortname] = old_problem_info_dict[value]
+
+    # Get the old shortname information in the contest area problem
+    selected_problem = contest_problem_selected_shortname_process(old_problem_info_dict=old_problem_info_dict, selected_problem=selected_problem)
+    
+    return problem_information, selected_problem
+
+
+def contest_problem_upload_edit_view(request, id, cid):
+    contest_data = json.loads(request.POST.get("contestDataJson"))
+    selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
+
+    client_obj = DomServerClient.objects.get(id=id)
+    problem_crawler = create_problem_crawler(client_obj)
+
+    # Get contest information format
+    contest_information = problem_crawler.contest_format_process(
+        contest_data=contest_data
+    )
+
+    # Get problem information format
+    problem_information = problem_crawler.problem_format_process(
+        problem_data=selected_problem
+    )
+
+    # Get old problem information format
+    old_problem_information = problem_crawler.get_contest_or_problem_information(
+        contest_id=cid, need_content="problem"
+    )
+
+    # Add old problem information to new problem
+    problem_information, selected_problem = contest_problem_information_update_process(
+        problem_information=problem_information,
+        old_problem_information=old_problem_information,
+        selected_problem=selected_problem,
+    )
+
+    # Sum the competition and problem data and convert them into json
+    contest_information.update(problem_information)
+    contest_information.update({"contest[save]": ""})
+    create_information = contest_information
+
+    create_data_json = json.dumps(create_information)
+
+    context = {
+        "contest_id": cid,
+        "server_client_id": client_obj.id,
+        "selected_problem_dict": selected_problem,
+        "create_data_json": create_data_json,
+    }
+
+    return render(request, "contest_problem_shortname_edit.html", context)
+
 
 def contest_problem_copy_view(request, id, cid):
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
 
-    # get now time
+    # Get now time
     current_time = datetime.now()
     format_time = current_time.strftime("%Y%m%d%H%M%S")
 
-    # get contest information
+    # Get contest information
     contest_problem_information_dict = (
         problem_crawler.get_contest_or_problem_information(contest_id=cid)
     )
 
-    # renameing of contest
+    # Renameing of contest
     contest_problem_information_dict[
         "contest[shortname]"
     ] = f"{contest_problem_information_dict['contest[shortname]']}_copy_{format_time}"
+
+    # Create a new contest area
     problem_crawler.contest_and_problem_create(
         create_contest_information=contest_problem_information_dict
     )
 
-    # get all contest
+    # Get all contest
     contest_dicts = problem_crawler.get_contest_all()
 
     context = {

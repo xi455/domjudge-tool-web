@@ -108,6 +108,16 @@ class ProblemCrawler:
 
         raise exceptions.ProblemDownloaderLoginException("登入失敗")
 
+    def misjudgment(self, soup):
+
+        # Determine whether there are upload errors
+
+        error_elements = soup.select_one(".form-error-message")
+        if error_elements:
+            return False
+        else:
+            return True
+
     def get_contest_name(self, contests_id):
         page = self.session.get(self.url + ConTestPath.GET)
         soup = BeautifulSoup(page.text, "html.parser")
@@ -129,9 +139,6 @@ class ProblemCrawler:
                 web_contest_name = td_elements[1].text.strip()
 
                 return web_contest_name
-
-    # def get_contest_yaml(self, constest_id):
-    #     return self.session.get(self.url + ApiPath.CONTEST_YAML.format(constest_id))
 
     def get_contest_all_name(self):
         data = self.get_contest_all()
@@ -288,7 +295,7 @@ class ProblemCrawler:
         for key, value in contest_information.items():
             if value is True:
                 contest_information[key] = "1"
-                
+
             if value is False:
                 contest_information[key] = "0"
 
@@ -364,38 +371,8 @@ class ProblemCrawler:
         )
 
         soup = BeautifulSoup(page.text, "html.parser")
-        print(soup)
-        error_elements = soup.select_one(".form-error-message")
-        if error_elements:
-            return False
-        else:
-            return True
 
-    def contest_info_update(self, contest_id, contest_data_dict):
-
-        # return the bool to see if it succeeded.
-
-        problem_information_dict = self.get_contest_or_problem_information(
-            contest_id=contest_id, need_content="problem"
-        )
-        contest_data_dict.update(problem_information_dict)
-
-        contest_data_dict.update({"contest[save]": ""})
-
-        page = self.session.post(
-            self.url + ConTestPath.POST_SINGLE.format(contest_id),
-            data=contest_data_dict,
-        )
-
-        soup = BeautifulSoup(page.text, "html.parser")
-        error_elements = soup.select_one(".form-error-message")
-
-        print(soup)
-        print("error_elements:", error_elements)
-        if error_elements:
-            return False
-        else:
-            return True
+        return self.misjudgment(soup=soup)
 
     def get_contest_or_problem_information(self, contest_id, need_content=None):
 
@@ -451,31 +428,14 @@ class ProblemCrawler:
         return contest_problem_info_dict
 
     def contest_problem_upload(self, contest_id, problem_data):
-        contest_problem_info_dict = self.get_contest_or_problem_information(
-            contest_id=contest_id
-        )
-
-        del contest_problem_info_dict["contest[teams][]"]
-        del contest_problem_info_dict["contest[teamCategories][]"]
-        del contest_problem_info_dict["contest[save]"]
-
-        contest_problem_info_dict.update(problem_data)
-        contest_problem_info_dict["contest[save]"] = ""
-
-        for key, value in contest_problem_info_dict.items():
-            print(key, value, type(value))
 
         page = self.session.post(
             self.url + ConTestPath.POST_SINGLE.format(contest_id),
-            data=contest_problem_info_dict,
+            data=problem_data,
         )
 
         soup = BeautifulSoup(page.text, "html.parser")
-        error_elements = soup.select_one(".form-error-message")
-        if error_elements:
-            return False
-        else:
-            return True
+        return self.misjudgment(soup=soup)
 
     def get_testcases_all(self, problem_id):
         page = self.session.get(self.url + TestCasePath.GET.format(problem_id))
@@ -547,9 +507,6 @@ class ProblemCrawler:
         page = self.session.post(
             self.url + ConTestPath.DELETE.format(contest_id, web_problem_id)
         )
-
-        print(self.url + ConTestPath.DELETE.format(contest_id, web_problem_id))
-        print(page.status_code)
 
         is_success = True
         if page.status_code == 404:
