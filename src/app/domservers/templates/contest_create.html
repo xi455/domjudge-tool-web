@@ -44,7 +44,6 @@ delete-confirmation{%endblock %}
           {{ form.non_field_errors }}
           <form action="" class="needs-validation" novalidate method="post">
             {% csrf_token %}
-            client_name:{{client_id}}
             <input type="hidden" name="client_id" value="{{client_id}}">
             <div class="row">
               <div class="col-12 col-sm-9">                
@@ -70,7 +69,7 @@ delete-confirmation{%endblock %}
                   {{ form.activate_time.errors }}
                   <label for="{{ form.activate_time.id_for_label }}">啟動時間:</label>
                   {{ form.activate_time }}                  
-                  <small id="activate_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：-12:00:00</small>
+                  <small id="activate_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 12:00:00 Asia/Taipei</small>
                   <div class="invalid-feedback">
                     尚未輸入啟動時間
                   </div> 
@@ -79,7 +78,7 @@ delete-confirmation{%endblock %}
                   {{ form.start_time.errors }}
                   <label for="{{ form.start_time.id_for_label }}">開始時間:</label>
                   {{ form.start_time }}
-                  <small id="startTimeHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 14:06:00 Asia/Taipei</small>
+                  <small id="startTimeHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 13:00:00 Asia/Taipei</small>
                   <div class="invalid-feedback">
                     尚未輸入開始時間
                   </div> 
@@ -93,7 +92,7 @@ delete-confirmation{%endblock %}
                   {{ form.scoreboard_freeze_length.errors }}
                   <label for="{{ form.scoreboard_freeze_length.id_for_label }}">凍結時間:</label>
                   {{ form.scoreboard_freeze_length }}
-                  <small id="scoreboardFreezeLengthHelp" class="form-text text-muted">請按照正確格式輸入 例：+02:00:00，可不填寫</small>
+                  <small id="scoreboardFreezeLengthHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 15:00:00 Asia/Taipei，可不填寫</small>
                   <div class="invalid-feedback">
                     尚未輸入凍結時間
                   </div> 
@@ -102,7 +101,7 @@ delete-confirmation{%endblock %}
                   {{ form.end_time.errors }}
                   <label for="{{ form.end_time.id_for_label }}">記分牌結束時間:</label>
                   {{ form.end_time }}                  
-                  <small id="end_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：+03:00:00</small>
+                  <small id="end_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 18:00:00 Asia/Taipei</small>
                   <div class="invalid-feedback">
                     尚未輸入結束時間
                   </div> 
@@ -111,7 +110,7 @@ delete-confirmation{%endblock %}
                   {{ form.scoreboard_unfreeze_time.errors }}
                   <label for="{{ form.scoreboard_unfreeze_time.id_for_label }}">記分牌解凍時間:</label>
                   {{ form.scoreboard_unfreeze_time }}                  
-                  <small id="scoreboard_unfreeze_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：+03:30:00，可不填寫</small>
+                  <small id="scoreboard_unfreeze_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 20:00:00 Asia/Taipei，可不填寫</small>
                   <div class="invalid-feedback">
                     尚未輸入記分牌解凍時間
                   </div> 
@@ -120,7 +119,7 @@ delete-confirmation{%endblock %}
                   {{ form.deactivate_time.errors }}
                   <label for="{{ form.deactivate_time.id_for_label }}">停用時間:</label>
                   {{ form.deactivate_time }}                  
-                  <small id="deactivate_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：+36:00:00，可不填寫</small>                  
+                  <small id="deactivate_timeHelp" class="form-text text-muted">請按照正確格式輸入 例：2024-01-01 22:00:00 Asia/Taipei，可不填寫</small>                  
                   <div class="invalid-feedback">
                     尚未輸入停用時間
                   </div> 

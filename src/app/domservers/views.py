@@ -16,8 +16,7 @@ from pydantic import BaseModel, validator
 from app.domservers.forms import DomServerContestCreatForm
 from app.domservers.models import DomServerClient
 from utils.admins import create_problem_crawler
-from utils.forms import validate_country_format, validate_time_format
-from utils.views import contest_initial_data_format
+from utils.forms import validate_country_format
 
 # Create your views here.
 
@@ -29,7 +28,6 @@ def contest_create_view(request):
         client_id = request.POST.get("client_id")
 
         if form.is_valid():
-            print("the form is a success.")
             creat_contest_data = form.cleaned_data
             client_obj = DomServerClient.objects.get(id=client_id)
 
@@ -54,12 +52,12 @@ def contest_create_view(request):
         initial_data = {
             "short_name": "contest",
             "name": "new contest",
-            "activate_time": "-12:00:00",  # 必須得晚於 start
-            "start_time": "2023-01-01 14:06:00 Asia/Taipei",
-            "scoreboard_freeze_length": "+02:00:00",  # 時間得在 start - end 之間
-            "end_time": "+03:00:00",
-            "scoreboard_unfreeze_time": "+03:30:00",  # 解凍時間必須大於結束時間
-            "deactivate_time": "+36:00:00",  # 停用時間必須大於解凍時間
+            "activate_time": "2024-01-01 12:00:00 Asia/Taipei",  # 必須得晚於 start_time
+            "start_time": "2024-01-01 13:00:00 Asia/Taipei",
+            "scoreboard_freeze_length": "2024-01-01 15:00:00 Asia/Taipei",  # 時間得在 start - end 之間
+            "end_time": "2024-01-01 18:00:00 Asia/Taipei",
+            "scoreboard_unfreeze_time": "2024-01-01 20:00:00 Asia/Taipei",  # 解凍時間必須大於結束時間
+            "deactivate_time": "2024-01-01 22:00:00 Asia/Taipei",  # 停用時間必須大於解凍時間
         }
 
         form = DomServerContestCreatForm(initial=initial_data)
@@ -154,31 +152,6 @@ def contest_problem_shortname_create_view(request):
     return render(request, "contest_problem_shortname_create.html", context)
 
 
-def contest_initial_data_format(initial_data: dict):
-
-    # Convert contest data to the same format.
-
-    for key, value in initial_data.items():
-
-        if value == "":
-            continue
-
-        if key in ("short_name", "name") or isinstance(value, bool):
-            continue
-
-        if key == "start_time":
-            initial_data[key] = validate_country_format(time_string=value)
-            continue
-
-        if len(value) > 9 and key != "start_time":
-            continue
-
-        if validate_time_format(time_string=value) is False:
-            initial_data[key] = f"{value}:00"
-
-    return initial_data
-
-
 def contest_information_edit_view(request, id, cid):
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
@@ -224,7 +197,7 @@ def contest_information_edit_view(request, id, cid):
     if request.method == "GET":
 
         # Get contest information
-        (contest_info_response) = problem_crawler.get_contest_or_problem_information(
+        contest_info_response = problem_crawler.get_contest_or_problem_information(
             contest_id=cid, need_content="contest"
         )
 
@@ -259,9 +232,6 @@ def contest_information_edit_view(request, id, cid):
             if contest_info_response["contest[enabled]"] == "1"
             else False,
         }
-        
-        # Unified contest information format
-        initial_data = contest_initial_data_format(initial_data=initial_data)
 
         form = DomServerContestCreatForm(initial=initial_data)
 
@@ -286,13 +256,15 @@ def contest_problem_shortname_edit_view(request, id, cid):
     old_problem_info_remove_process(problem_crawler=problem_crawler, cid=cid)
 
     # Update contest information
-    upload_response = problem_crawler.contest_problem_upload(contest_id=cid, problem_data=contest_info)
+    upload_response = problem_crawler.contest_problem_upload(
+        contest_id=cid, problem_data=contest_info
+    )
 
     if upload_response:
         messages.success(request, "考區編輯成功！！")
     else:
         messages.error(request, "考區編輯失敗！！")
-        
+
     # get all contest
     contest_dicts = problem_crawler.get_contest_all()
 
@@ -302,6 +274,7 @@ def contest_problem_shortname_edit_view(request, id, cid):
     }
 
     return render(request, "contest_list.html", context)
+
 
 def old_problem_info_remove_process(problem_crawler, cid):
 
@@ -317,7 +290,9 @@ def old_problem_info_remove_process(problem_crawler, cid):
 
         if problem_need_delete:
             problem_need_delete_id = [
-                value for key, value in problem_need_delete.items() if "[problem]" in key
+                value
+                for key, value in problem_need_delete.items()
+                if "[problem]" in key
             ]
 
             for problem_id in problem_need_delete_id:
@@ -328,8 +303,9 @@ def old_problem_info_remove_process(problem_crawler, cid):
     except:
         assert False, "移除舊題目資訊時發現錯誤"
 
+
 def contest_problem_selected_shortname_process(old_problem_info_dict, selected_problem):
-    
+
     # Return the id, name, shortname information of the problem
     # example: [{'name': 'Hello World', 'id': '1', 'shortname': 'Hello World test'}]
 
@@ -346,7 +322,7 @@ def contest_problem_selected_shortname_process(old_problem_info_dict, selected_p
 def contest_problem_information_update_process(
     problem_information, old_problem_information, selected_problem
 ):
-    
+
     # Get the shortname of the old problem information
     # Replace the shortname of the current problem information
     # Reture problem information and selected_problem
@@ -366,8 +342,10 @@ def contest_problem_information_update_process(
             problem_information[problem_shortname] = old_problem_info_dict[value]
 
     # Get the old shortname information in the contest area problem
-    selected_problem = contest_problem_selected_shortname_process(old_problem_info_dict=old_problem_info_dict, selected_problem=selected_problem)
-    
+    selected_problem = contest_problem_selected_shortname_process(
+        old_problem_info_dict=old_problem_info_dict, selected_problem=selected_problem
+    )
+
     return problem_information, selected_problem
 
 

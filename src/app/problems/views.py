@@ -161,13 +161,11 @@ def problem_contest_view(request):
                 and problem_log.web_problem_contest == contest_name
                 and problem_log.web_problem_state == "新增"
             ):
-                print(contests_id, problem_log.web_problem_id)
                 is_success = problem_crawler.delete_contest_problem(
                     contest_id=contests_id,
                     web_problem_id=problem_log.web_problem_id,
                 )
 
-                print(is_success)
                 if is_success:
                     new_problem_log_obj = ProblemServerLog(
                         problem=problem_log.problem,

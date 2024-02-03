@@ -321,9 +321,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                         problem_del_info_dict[server_client_obj].append(problem_log)
                 # problem_log.delete()
 
-        print(problem_del_info_dict)
         for server_client_obj, problem_log_obj_list in problem_del_info_dict.items():
-            print(server_client_obj, problem_log_obj_list)
             for problem_log_obj in problem_log_obj_list:
                 new_problem_log_obj = ProblemServerLog(
                     problem=problem_log_obj.problem,
