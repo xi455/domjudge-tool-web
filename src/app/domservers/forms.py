@@ -174,7 +174,7 @@ class DomServerContestCreatForm(forms.Form):
                     code="invalid",
                 )
             return activate_time
-        
+
         raise forms.ValidationError(
             ("開始時間欄位疑似有誤請再次檢查"),
             code="invalid",
@@ -215,9 +215,9 @@ class DomServerContestCreatForm(forms.Form):
                     ("凍結時間時間點必須在開始時間和結束時間之間"),
                     code="invalid",
                 )
-            
+
             return scoreboard_freeze_length
-        
+
         raise forms.ValidationError(
             ("開始時間欄位與記分牌結束時間欄位疑似有誤請再次檢查"),
             code="invalid",
@@ -242,7 +242,7 @@ class DomServerContestCreatForm(forms.Form):
                     code="invalid",
                 )
             return end_time
-        
+
         raise forms.ValidationError(
             ("開始時間欄位疑似有誤請再次檢查"),
             code="invalid",

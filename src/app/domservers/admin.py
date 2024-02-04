@@ -4,7 +4,7 @@ from django_object_actions import DjangoObjectActions, action
 
 from app.domservers.forms import DomServerAccountForm
 from app.domservers.models import DomServerClient
-from utils.admins import create_problem_crawler
+from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 
 # Register your models here.
 
@@ -40,12 +40,21 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
     @action(label="取得考區資訊")
     def get_contest_info(self, request, obj):
         problem_crawler = create_problem_crawler(obj)
-        contest_dicts = problem_crawler.get_contest_all()
-
+        getdata = request.GET
+        page_obj = get_contest_all_and_page_obj(getdata, problem_crawler)
+        
+        
         context = {
-            "contest_dicts": contest_dicts,
+            "page_obj": page_obj,  # 將 page_obj 加入到上下文中
             "server_client_name": obj.name,
             "server_client_id": obj.id,
+            "opts": obj._meta,  # 獲取模型的應用標籤
+            "title": "考區總覽",  # 當前頁面的名稱
         }
+        print(obj)
+        # print(dir(obj._meta))
+        print(dir(obj._meta.app_label))
+        print(obj._meta.app_label.title)
+
 
         return render(request, "contest_list.html", context)

@@ -7,7 +7,6 @@ from typing import Optional
 import yaml
 
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
@@ -15,7 +14,7 @@ from pydantic import BaseModel, validator
 
 from app.domservers.forms import DomServerContestCreatForm
 from app.domservers.models import DomServerClient
-from utils.admins import create_problem_crawler
+from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 from utils.forms import validate_country_format
 
 # Create your views here.
@@ -72,10 +71,15 @@ def contest_create_view(request):
 
 
 def contest_problem_shortname_process(form_data):
+    """
+    Process the contest problem shortname from the form data.
 
-    # get the information of the contest area and problem shortname,
-    # organize and return the information of the entire contest area.
+    Args:
+        form_data (dict): The form data containing the contest and problem information.
 
+    Returns:
+        dict: The processed contest information with updated problem shortnames.
+    """
     contest_info = json.loads(form_data.get("contest_data_json"))
     problem_info = json.loads(form_data.get("shortNameHidden"))
 
@@ -111,10 +115,11 @@ def contest_problem_upload_view(request, id):
         messages.error(request, "考區創建失敗！！")
 
     # get all contest
-    contest_dicts = problem_crawler.get_contest_all()
+    getdata = request.GET
+    page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
 
     context = {
-        "contest_dicts": contest_dicts,
+        "page_obj": page_obj,
         "server_client_id": client_obj.id,
     }
 
@@ -152,6 +157,7 @@ def contest_problem_shortname_create_view(request):
     return render(request, "contest_problem_shortname_create.html", context)
 
 
+@require_http_methods(["GET", "POST"])
 def contest_information_edit_view(request, id, cid):
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
@@ -244,6 +250,7 @@ def contest_information_edit_view(request, id, cid):
     return render(request, "contest_edit.html", context)
 
 
+@require_http_methods(["POST"])
 def contest_problem_shortname_edit_view(request, id, cid):
     form_data = request.POST
     client_obj = DomServerClient.objects.get(id=id)
@@ -266,10 +273,11 @@ def contest_problem_shortname_edit_view(request, id, cid):
         messages.error(request, "考區編輯失敗！！")
 
     # get all contest
-    contest_dicts = problem_crawler.get_contest_all()
+    getdata = request.GET
+    page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
 
     context = {
-        "contest_dicts": contest_dicts,
+        "page_obj": page_obj,
         "server_client_id": client_obj.id,
     }
 
@@ -305,9 +313,11 @@ def old_problem_info_remove_process(problem_crawler, cid):
 
 
 def contest_problem_selected_shortname_process(old_problem_info_dict, selected_problem):
-
-    # Return the id, name, shortname information of the problem
-    # example: [{'name': 'Hello World', 'id': '1', 'shortname': 'Hello World test'}]
+    """
+    Return the id, name, shortname information of the problem
+    example: [{'name': 'Hello World', 'id': '1', 'shortname': 'Hello World test'}]
+    return dict format problem_id: problem_shortname
+    """
 
     old_problem_info_keys = old_problem_info_dict.keys()
     for data in selected_problem:
@@ -322,13 +332,14 @@ def contest_problem_selected_shortname_process(old_problem_info_dict, selected_p
 def contest_problem_information_update_process(
     problem_information, old_problem_information, selected_problem
 ):
+    """
+    Get the shortname of the old problem information
+    Replace the shortname of the current problem information
+    Reture problem information and selected_problem
 
-    # Get the shortname of the old problem information
-    # Replace the shortname of the current problem information
-    # Reture problem information and selected_problem
-
-    # old_problem_info_dict example: {'3': 'test'}
-    # old_problem_info_dict format problem_id: problem_shortname
+    old_problem_info_dict example: {'3': 'test'}
+    old_problem_info_dict format problem_id: problem_shortname
+    """
 
     old_problem_info_dict = dict()
     for key, value in old_problem_information.items():
@@ -349,7 +360,9 @@ def contest_problem_information_update_process(
     return problem_information, selected_problem
 
 
+@require_http_methods(["POST"])
 def contest_problem_upload_edit_view(request, id, cid):
+    # Extract contest data and selected problems from the request
     contest_data = json.loads(request.POST.get("contestDataJson"))
     selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
 
@@ -419,10 +432,11 @@ def contest_problem_copy_view(request, id, cid):
     )
 
     # Get all contest
-    contest_dicts = problem_crawler.get_contest_all()
+    getdata = request.GET
+    page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
 
     context = {
-        "contest_dicts": contest_dicts,
+        "page_obj": page_obj,
         "server_client_id": client_obj.id,
     }
 
