@@ -16,9 +16,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-<ol class="breadcrumb float-sm-right">
-    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
-</ol>
+{% include 'include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
@@ -42,7 +40,7 @@ delete-confirmation{%endblock %}
                 <div id="content-main">
 
                     {{ form.non_field_errors }}
-                    <form action="{% url 'contest_information_edit' client_id contest_id %}" class="needs-validation" novalidate method="post">
+                    <form action="{% url 'contest_information_edit' server_client_id contest_id %}" class="needs-validation" novalidate method="post">
                         {% csrf_token %}
                         <div class="row">
                             <div class="col-12 col-sm-9">

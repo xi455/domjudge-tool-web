@@ -43,18 +43,14 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
         getdata = request.GET
         page_obj = get_contest_all_and_page_obj(getdata, problem_crawler)
         
-        
         context = {
             "page_obj": page_obj,  # 將 page_obj 加入到上下文中
             "server_client_name": obj.name,
             "server_client_id": obj.id,
+
             "opts": obj._meta,  # 獲取模型的應用標籤
-            "title": "考區總覽",  # 當前頁面的名稱
+            "available_apps": self.admin_site.each_context(request).get("available_apps"),  # 獲取 sidebar 所有應用
         }
-        print(obj)
-        # print(dir(obj._meta))
-        print(dir(obj._meta.app_label))
-        print(obj._meta.app_label.title)
 
 
         return render(request, "contest_list.html", context)

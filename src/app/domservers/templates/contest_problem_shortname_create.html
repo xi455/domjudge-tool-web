@@ -1,4 +1,4 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/change_form.html" %}
 {% load i18n admin_urls static jazzmin %}
 {% load static %}
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
@@ -13,9 +13,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-<ol class="breadcrumb float-sm-right">
-    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
-</ol>
+{% include 'include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}

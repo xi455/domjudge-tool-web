@@ -1,4 +1,4 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/change_form.html" %}
 {% load i18n admin_urls static jazzmin %}
 {% load static %}
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
@@ -13,9 +13,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-<ol class="breadcrumb float-sm-right">
-    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
-</ol>
+{% include 'include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
@@ -24,7 +22,6 @@ delete-confirmation{%endblock %}
 {% block content %}
 
 <div class="col-12">
-    {{contest_data_json}}
         <div class="card card-primary card-outline">
             <div class="card-header with-border">
                 <h4 class="card-title">
@@ -36,8 +33,8 @@ delete-confirmation{%endblock %}
                 <div id="content-main">
                     <form action="{% url 'contest_problem_shortname_create' %}" method="post">
                         {% csrf_token %}
-                        client_name:{{client_id}}
-                        <input type="hidden" name="client_id" value="{{client_id}}">
+                        client_name:{{server_client_id}}
+                        <input type="hidden" name="server_client_id" value="{{server_client_id}}">
                         <div class="row">
                             <div class="col-12 col-sm-9">
                                 <div class="form-check w-100">

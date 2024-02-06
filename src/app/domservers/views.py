@@ -16,19 +16,21 @@ from app.domservers.forms import DomServerContestCreatForm
 from app.domservers.models import DomServerClient
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 from utils.forms import validate_country_format
+from utils.views import get_available_apps
 
 # Create your views here.
 
-
 @require_http_methods(["GET", "POST"])
 def contest_create_view(request):
+    available_apps = get_available_apps(request)
+
     if request.method == "POST":
         form = DomServerContestCreatForm(request.POST)
-        client_id = request.POST.get("client_id")
+        server_client_id = request.POST.get("server_client_id")
 
         if form.is_valid():
             creat_contest_data = form.cleaned_data
-            client_obj = DomServerClient.objects.get(id=client_id)
+            client_obj = DomServerClient.objects.get(id=server_client_id)
 
             problem_crawler = create_problem_crawler(client_obj)
             problem_data_dict = problem_crawler.get_problems()
@@ -36,13 +38,16 @@ def contest_create_view(request):
 
             if form.cleaned_data["short_name"] in contest_all_name:
                 messages.error(request, "考區簡稱重複！！請重新輸入")
-                return redirect(f"/contest/create/?server_client_id={client_id}")
+                return redirect(f"/contest/create/?server_client_id={server_client_id}")
 
             contest_data_json = json.dumps(creat_contest_data)
             context = {
-                "client_id": client_id,
+                "server_client_id": server_client_id,
+                "server_client_name": client_obj.name,
                 "contest_data_json": contest_data_json,
                 "problem_data_dict": problem_data_dict,
+                "opts": client_obj._meta,
+                "available_apps": available_apps,
             }
 
             return render(request, "contest_creat_selected_problem.html", context)
@@ -60,11 +65,15 @@ def contest_create_view(request):
         }
 
         form = DomServerContestCreatForm(initial=initial_data)
-        client_id = request.GET.get("server_client_id")
+        server_client_id = request.GET.get("server_client_id")
+        obj = DomServerClient.objects.get(id=server_client_id)
 
     context = {
         "form": form,
-        "client_id": client_id,
+        "server_client_id": server_client_id,
+        "server_client_name": obj.name,
+        "opts": obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_create.html", context)
@@ -101,6 +110,7 @@ def contest_problem_shortname_process(form_data):
 def contest_problem_upload_view(request, id):
     form_data = request.POST
     create_contest_info = contest_problem_shortname_process(form_data=form_data)
+    available_apps = get_available_apps(request)
 
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
@@ -121,6 +131,9 @@ def contest_problem_upload_view(request, id):
     context = {
         "page_obj": page_obj,
         "server_client_id": client_obj.id,
+        "server_client_name": client_obj.name,
+        "opts": client_obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_list.html", context)
@@ -128,11 +141,12 @@ def contest_problem_upload_view(request, id):
 
 @require_http_methods(["POST"])
 def contest_problem_shortname_create_view(request):
-    client_id = request.POST.get("client_id")
+    available_apps = get_available_apps(request)
+    server_client_id = request.POST.get("server_client_id")
     contest_data = json.loads(request.POST.get("contestDataJson"))
     selected_problem_dict = json.loads(request.POST.get("selectedCheckboxes"))
 
-    client_obj = DomServerClient.objects.get(id=client_id)
+    client_obj = DomServerClient.objects.get(id=server_client_id)
     problem_crawler = create_problem_crawler(client_obj)
 
     contest_information = problem_crawler.contest_format_process(
@@ -149,9 +163,12 @@ def contest_problem_shortname_create_view(request):
     create_data_json = json.dumps(create_information)
 
     context = {
-        "server_client_id": client_id,
+        "server_client_id": server_client_id,
+        "server_client_name": client_obj.name,
         "create_data_json": create_data_json,
         "selected_problem_dict": selected_problem_dict,
+        "opts": client_obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_problem_shortname_create.html", context)
@@ -161,6 +178,7 @@ def contest_problem_shortname_create_view(request):
 def contest_information_edit_view(request, id, cid):
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
+    available_apps = get_available_apps(request)
 
     if request.method == "POST":
         form = DomServerContestCreatForm(request.POST)
@@ -192,11 +210,14 @@ def contest_information_edit_view(request, id, cid):
             ]
 
             context = {
-                "client_id": client_obj.id,
+                "server_client_id": client_obj.id,
+                "server_client_name": client_obj.name,
                 "contest_id": cid,
                 "contest_update_data_json": contest_update_data_json,
                 "existing_problem_id_list": existing_problem_id_list,
                 "problem_data_dict": problem_data_dict,
+                "opts": client_obj._meta,
+                "available_apps": available_apps,
             }
             return render(request, "contest_edit_selected_problem.html", context)
 
@@ -242,9 +263,12 @@ def contest_information_edit_view(request, id, cid):
         form = DomServerContestCreatForm(initial=initial_data)
 
     context = {
-        "client_id": client_obj.id,
+        "server_client_id": client_obj.id,
+        "server_client_name": client_obj.name,
         "contest_id": cid,
         "form": form,
+        "opts": client_obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_edit.html", context)
@@ -255,6 +279,7 @@ def contest_problem_shortname_edit_view(request, id, cid):
     form_data = request.POST
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
+    available_apps = get_available_apps(request)
 
     # Get the latest contest area information
     contest_info = contest_problem_shortname_process(form_data=form_data)
@@ -279,6 +304,9 @@ def contest_problem_shortname_edit_view(request, id, cid):
     context = {
         "page_obj": page_obj,
         "server_client_id": client_obj.id,
+        "server_client_name": client_obj.name,
+        "opts": client_obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_list.html", context)
@@ -362,6 +390,9 @@ def contest_problem_information_update_process(
 
 @require_http_methods(["POST"])
 def contest_problem_upload_edit_view(request, id, cid):
+
+    available_apps = get_available_apps(request)
+
     # Extract contest data and selected problems from the request
     contest_data = json.loads(request.POST.get("contestDataJson"))
     selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
@@ -401,8 +432,11 @@ def contest_problem_upload_edit_view(request, id, cid):
     context = {
         "contest_id": cid,
         "server_client_id": client_obj.id,
+        "server_client_name": client_obj.name,
         "selected_problem_dict": selected_problem,
         "create_data_json": create_data_json,
+        "opts": client_obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_problem_shortname_edit.html", context)
@@ -411,6 +445,7 @@ def contest_problem_upload_edit_view(request, id, cid):
 def contest_problem_copy_view(request, id, cid):
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
+    available_apps = get_available_apps(request)
 
     # Get now time
     current_time = datetime.now()
@@ -438,6 +473,9 @@ def contest_problem_copy_view(request, id, cid):
     context = {
         "page_obj": page_obj,
         "server_client_id": client_obj.id,
+        "server_client_name": client_obj.name,
+        "opts": client_obj._meta,
+        "available_apps": available_apps,
     }
 
     return render(request, "contest_list.html", context)

@@ -12,9 +12,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-<ol class="breadcrumb float-sm-right">
-    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
-</ol>
+{% include 'include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
@@ -23,7 +21,6 @@ delete-confirmation{%endblock %}
 {% block content %}
 
 <div class="col-12">
-    {{contest_update_data_json}}
     {% if process %}
     <div class="card card-danger card-outline">
         {% else %}
@@ -37,7 +34,7 @@ delete-confirmation{%endblock %}
 
             <div class="card-body">
                 <div id="content-main">
-                    <form action="{% url 'contest_problem_upload_edit' client_id contest_id %}" method="post">
+                    <form action="{% url 'contest_problem_upload_edit' server_client_id contest_id %}" method="post">
                         {% csrf_token %}
                         <div class="row">
                             <div class="col-12 col-sm-9">

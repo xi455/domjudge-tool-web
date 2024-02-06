@@ -12,15 +12,12 @@
 {% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}
 delete-confirmation{%endblock %}
 
-
 {% block breadcrumbs %}
-
-{{block.super}}
+{% include 'include/_breadcrumbs.html' %}
 {% endblock %}
 
-
 {% block content_title %}
-考區
+考區內容
 {% endblock %}
 {% block content %}
 
@@ -28,7 +25,7 @@ delete-confirmation{%endblock %}
     <div class="card card-primary card-outline">
         <div class="card-header with-border">
             <h4 class="card-title">
-            考區內容
+            考區列表
             </h4>            
         </div>
 

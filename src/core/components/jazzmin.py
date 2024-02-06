@@ -76,6 +76,8 @@ JAZZMIN_SETTINGS: dict = {
         "users",
         "problems",
         "problems.Problem",
+        "domservers",
+        "domservers.DomServerClient",
     ],
     # Custom links to append to app groups, keyed on app name
     # 'custom_links': {
@@ -111,7 +113,7 @@ JAZZMIN_SETTINGS: dict = {
     "custom_css": "jazzmin.css",
     "custom_js": None,
     # Whether to show the UI customizer on the sidebar
-    "show_ui_builder": False,
+    "show_ui_builder": True,
     ###############
     # Change view #
     ###############
@@ -129,4 +131,5 @@ JAZZMIN_SETTINGS: dict = {
     },
     # Add a language dropdown into the admin
     "language_chooser": False,
+
 }
