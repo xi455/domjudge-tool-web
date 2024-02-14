@@ -73,3 +73,28 @@ class DomServerClient(BaseModel):
     class Meta:
         verbose_name = "Dom Server 連線資訊"
         verbose_name_plural = "Dom Server 連線資訊"
+
+class ContestRecord(BaseModel):
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="contest_records",
+        verbose_name="使用者",
+    )
+    server_id = models.TextField(
+        verbose_name="伺服器ID",
+        help_text="請輸入伺服器ID",
+        editable=False,
+    )
+    domjudge_contest_id = models.TextField(
+        verbose_name="Domjudge考區ID",
+        help_text="請輸入Domjudge考區ID",
+        editable=False,
+    )
+
+    def __str__(self):
+        return f"Contest Record - User: {self.owner}, Domjudge Contest Cid: {self.domjudge_contest_id}"
+
+    class Meta:
+        verbose_name = "Contest 紀錄"
+        verbose_name_plural = "Contest 紀錄"

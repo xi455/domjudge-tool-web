@@ -3,6 +3,7 @@ from django.core.validators import FileExtensionValidator, ValidationError
 from django.db import models
 
 from app.domservers.models import DomServerClient
+
 from utils.models import BaseModel
 
 
@@ -89,14 +90,26 @@ class ProblemInOut(models.Model):
 
 
 class ProblemServerLog(models.Model):
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="owner_log",
+        verbose_name="使用者紀錄",
+        null=True,
+    )
     problem = models.ForeignKey(
         Problem,
         on_delete=models.CASCADE,
         related_name="problem_log",
+        verbose_name="題目紀錄",
+        editable=False,
     )
     server_client = models.ForeignKey(
         DomServerClient,
         on_delete=models.CASCADE,
+        related_name="server_log",
+        verbose_name="伺服器紀錄",
+        editable=False,
     )
     # web_problem_shortname = models.CharField("網站題目代號", max_length=68)
     web_problem_id = models.CharField("網站題目ID", max_length=68)

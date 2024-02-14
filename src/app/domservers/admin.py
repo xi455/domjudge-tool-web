@@ -3,10 +3,16 @@ from django.shortcuts import render
 from django_object_actions import DjangoObjectActions, action
 
 from app.domservers.forms import DomServerAccountForm
-from app.domservers.models import DomServerClient
+from app.domservers.models import DomServerClient, ContestRecord
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
+from django_object_actions import DjangoObjectActions
 
 # Register your models here.
+
+@admin.register(ContestRecord)
+class ContestRecordAdmin(DjangoObjectActions, admin.ModelAdmin):
+    list_display = [field.name for field in ContestRecord._meta.get_fields()]
+
 
 
 @admin.register(DomServerClient)

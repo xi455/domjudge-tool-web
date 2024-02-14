@@ -9,7 +9,8 @@ import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, validator
 
-import app.problems.exceptions as exceptions
+import app.problems.exceptions as problems_exceptions
+from utils import exceptions as utils_exceptions
 
 
 class TestCase(BaseModel):
@@ -106,17 +107,23 @@ class ProblemCrawler:
         if response.url == self.url + HomePath.JURY:
             return session
 
-        raise exceptions.ProblemDownloaderLoginException("登入失敗")
+        raise problems_exceptions.ProblemDownloaderLoginException("登入失敗")
 
     def misjudgment(self, soup):
+            """
+            Determine whether there are upload errors.
 
-        # Determine whether there are upload errors
+            Args:
+                soup (BeautifulSoup): The BeautifulSoup object representing the HTML page.
 
-        error_elements = soup.select_one(".form-error-message")
-        if error_elements:
-            return False
-        else:
-            return True
+            Returns:
+                bool: True if there are no upload errors, False otherwise.
+            """
+            error_elements = soup.select_one(".form-error-message")
+            if error_elements:
+                return False
+            else:
+                return True
 
     def get_contest_name(self, contests_id):
         page = self.session.get(self.url + ConTestPath.GET)
@@ -145,6 +152,14 @@ class ProblemCrawler:
 
         return data.keys()
 
+    def get_contest_name_cid(self, contest_shortname):
+        contests = self.get_contest_all()
+        for key, value in contests.items():
+            if value.shortname == contest_shortname:
+                return value.CID
+            
+        raise utils_exceptions.CrawlerGetContestCidException("找不到對應的考區ID")
+
     def get_contest_all(self):
 
         # get the all domjudge contest.
@@ -169,7 +184,7 @@ class ProblemCrawler:
         for tr_element in tr_elements:
 
             td_elements = tr_element.select("td")
-            contest_short_name = td_elements[1].text.strip()
+            contest_shortname = td_elements[1].text.strip()
             contest_info_dict = dict()
             for index in range(len(thead_elements) - button_without_title):
 
@@ -183,7 +198,7 @@ class ProblemCrawler:
                 contest_info_dict[thead] = td
 
             contest_details = ContestInfo(**contest_info_dict)
-            contests_detail_dict[contest_short_name] = contest_details
+            contests_detail_dict[contest_shortname] = contest_details
 
         return contests_detail_dict
 

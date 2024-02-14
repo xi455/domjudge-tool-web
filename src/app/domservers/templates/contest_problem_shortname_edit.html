@@ -33,8 +33,8 @@ delete-confirmation{%endblock %}
                 <div id="content-main">
                     <form action="{% url 'contest_problem_shortname_edit' server_client_id contest_id %}" method="post">
                         {% csrf_token %}
-                        server_client_id:{{server_client_id}}
-                        selected_problem_dict:{{selected_problem_dict}}
+                        <!-- server_client_id:{{server_client_id}}
+                        selected_problem_dict:{{selected_problem_dict}} -->
                         <!-- <input type="hidden" name="server_client_id" value="{{server_client_id}}"> -->
                         <input type="hidden" name="contest_data_json" value="{{create_data_json}}">
                         <input type="hidden" name="shortNameHidden" id="shortNameHidden">
@@ -48,12 +48,11 @@ delete-confirmation{%endblock %}
                                     <input type="text" class="form-control" id="{{data.id}}" name="{{data.name}}" value="{{data.shortname}}" aria-describedby="{{data.name}}lHelp" placeholder="settings shortname">                                
                                     </div>
                                 </div>
-                            {% endfor %}
-                                <div class="col-12 col-sm-9">
-                                    <h2>並未選擇任何考題</h2>
-                                </div>
+                                {% endfor %}
                             {% else %}
-                                
+                            <div class="col-12 col-sm-9 text-center">
+                                <h2>並未選擇任何考題</h2>
+                            </div>
                             {% endif %}
 
                             <div class="col-12 col-sm-3 mt-auto">                                

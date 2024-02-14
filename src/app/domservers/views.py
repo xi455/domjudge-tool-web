@@ -2,21 +2,19 @@ import datetime
 import json
 
 from datetime import datetime
-from typing import Optional
-
-import yaml
 
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
-from pydantic import BaseModel, validator
 
 from app.domservers.forms import DomServerContestCreatForm
 from app.domservers.models import DomServerClient
+from app.domservers import exceptions as domserver_exceptions
+
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
-from utils.forms import validate_country_format
-from utils.views import get_available_apps
+from utils.views import get_available_apps, contest_problem_shortname_process, create_contest_record
+from utils import exceptions as utils_exceptions
 
 # Create your views here.
 
@@ -79,33 +77,6 @@ def contest_create_view(request):
     return render(request, "contest_create.html", context)
 
 
-def contest_problem_shortname_process(form_data):
-    """
-    Process the contest problem shortname from the form data.
-
-    Args:
-        form_data (dict): The form data containing the contest and problem information.
-
-    Returns:
-        dict: The processed contest information with updated problem shortnames.
-    """
-    contest_info = json.loads(form_data.get("contest_data_json"))
-    problem_info = json.loads(form_data.get("shortNameHidden"))
-
-    contest_info_dict = dict()
-    for key, value in contest_info.items():
-        if key[21:-1] == "problem":
-            contest_info_dict[value] = key[18:19]
-
-    for data in problem_info:
-        problem_shortname = (
-            f'contest[problems][{contest_info_dict[data["id"]]}][shortname]'
-        )
-        contest_info[problem_shortname] = data["shortname"]
-
-    return contest_info
-
-
 @require_http_methods(["POST"])
 def contest_problem_upload_view(request, id):
     form_data = request.POST
@@ -120,6 +91,7 @@ def contest_problem_upload_view(request, id):
     )
 
     if create_response:
+        create_contest_record(request=request, problem_crawler=problem_crawler)
         messages.success(request, "考區創建成功！！")
     else:
         messages.error(request, "考區創建失敗！！")
@@ -337,7 +309,7 @@ def old_problem_info_remove_process(problem_crawler, cid):
                 )
 
     except:
-        assert False, "移除舊題目資訊時發現錯誤"
+        raise utils_exceptions.CrawlerRemoveContestOldProblemsException("移除舊題目資訊時發現錯誤")
 
 
 def contest_problem_selected_shortname_process(old_problem_info_dict, selected_problem):
@@ -443,39 +415,56 @@ def contest_problem_upload_edit_view(request, id, cid):
 
 
 def contest_problem_copy_view(request, id, cid):
-    client_obj = DomServerClient.objects.get(id=id)
-    problem_crawler = create_problem_crawler(client_obj)
-    available_apps = get_available_apps(request)
+    """
+    Copy a contest problem.
 
-    # Get now time
-    current_time = datetime.now()
-    format_time = current_time.strftime("%Y%m%d%H%M%S")
+    Args:
+        request: The HTTP request object.
+        id: The ID of the DomServerClient.
+        cid: The ID of the contest.
 
-    # Get contest information
-    contest_problem_information_dict = (
-        problem_crawler.get_contest_or_problem_information(contest_id=cid)
-    )
+    Returns:
+        The rendered contest_list.html template with the necessary context.
+    """
+    try:
+        client_obj = DomServerClient.objects.get(id=id)
+        problem_crawler = create_problem_crawler(client_obj)
+        available_apps = get_available_apps(request)
 
-    # Renameing of contest
-    contest_problem_information_dict[
-        "contest[shortname]"
-    ] = f"{contest_problem_information_dict['contest[shortname]']}_copy_{format_time}"
+        # Get now time
+        current_time = datetime.now()
+        format_time = current_time.strftime("%Y%m%d%H%M%S")
 
-    # Create a new contest area
-    problem_crawler.contest_and_problem_create(
-        create_contest_information=contest_problem_information_dict
-    )
+        # Get contest information
+        contest_problem_information_dict = (
+            problem_crawler.get_contest_or_problem_information(contest_id=cid)
+        )
 
-    # Get all contest
-    getdata = request.GET
-    page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
+        # Renameing of contest
+        contest_problem_information_dict[
+            "contest[shortname]"
+        ] = f"{contest_problem_information_dict['contest[shortname]']}_copy_{format_time}"
 
-    context = {
-        "page_obj": page_obj,
-        "server_client_id": client_obj.id,
-        "server_client_name": client_obj.name,
-        "opts": client_obj._meta,
-        "available_apps": available_apps,
-    }
+        # Create a new contest area
+        problem_crawler.contest_and_problem_create(
+            create_contest_information=contest_problem_information_dict
+        )
 
-    return render(request, "contest_list.html", context)
+        # Create a new contest record
+        create_contest_record(request=request, problem_crawler=problem_crawler, contest_shortname=contest_problem_information_dict["contest[shortname]"], server_client_id=id)
+
+        # Get all contest
+        getdata = request.GET
+        page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
+
+        context = {
+            "page_obj": page_obj,
+            "server_client_id": client_obj.id,
+            "server_client_name": client_obj.name,
+            "opts": client_obj._meta,
+            "available_apps": available_apps,
+        }
+
+        return render(request, "contest_list.html", context)
+    except Exception:
+        raise domserver_exceptions.ContestCopyException("Errors in copying the Contest area.")
