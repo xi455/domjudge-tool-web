@@ -1,0 +1,238 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb float-sm-right">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
+</ol>
+{% endblock %}
+
+{% block content_title %}
+上傳
+{% endblock %}
+{% block content %}
+
+<div class="col-12">
+    <div class="card card-primary card-outline">
+        <div class="card-header with-border">
+            <h4 class="card-title">
+                題目
+            </h4>
+        </div>
+        <div class="content-header"></div>
+        <div class="card-body">
+            <div id="content-main">
+                <div class="row">
+                    <div class="col-12 col-sm-9">
+                        <table class="table">
+                            <thead>
+                              <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">名稱</th>
+                                <th scope="col">狀態</th>
+                                <th scope="col">操作</th>
+                              </tr>
+                            </thead>
+                            <tbody id="problemTable">
+                                {% for name, value in problem_info.items %}
+                                    <tr class="problemTableTr">
+                                        <input type="hidden" name="problemHiddenID" value="{{value.problem_id}}">
+                                        <th scope="row">{{ forloop.counter }}</th>
+                                        <td>{{ name }}</td>
+                                         
+                                        {% if value.web_problem_state == "新增" %}
+                                            <td>已上傳</td>
+                                        {% else %}
+                                            <td>未上傳</td>
+                                            {% endif %}
+                                            
+                                        {% if value.web_problem_state == "新增" %}
+                                            <td>
+                                                <button type="button" name="errorButton" class="btn btn-danger btn-sm" onclick="removeRow(this)">移除</button>
+                                            </td>
+                                        {% else %}
+                                            <td></td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}                                
+                            </tbody>
+                          </table>
+                    </div>
+
+                    <div class="col-12 col-sm-3 mt-auto">
+                        <form action="{% url 'problem_upload' %}" method="post" id="form">{% csrf_token %}
+                            <input type="hidden" name="problemIdHidden">
+
+                            <div class="form-group">
+                                <select name="domserver" class="form-select w-100 p-2 rounded" aria-label="Default select example">
+                                    {% for name in server_client_name %}
+                                    <option value="{{ name }}">{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <select name="contests" class="form-select w-100 p-2 rounded" aria-label="Default select example">
+                                    {% for name, value in contest_name %}
+                                    <option value="{{ value }}">{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <input type="submit" id="input_submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control" value="{% trans "Yes, I'm sure" %}">
+                            </div>
+                            <div class="form-group">
+                                <input type="button" onclick="history.back()"
+                                        class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control" value="{% trans "No, take me back" %}">
+                            </div>                            
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function removeRow(button) {
+        // 獲取按鈕的父元素的父元素，也就是 tr 元素
+        let row = button.parentElement.parentElement;
+        // 從 tr 元素的父元素（也就是 table 或者 tbody 元素）中移除 tr 元素
+        row.parentElement.removeChild(row);
+    }
+
+    function getServerName(){
+        inputSubmit.disabled = true
+        contestsSelect.innerHTML = ""
+
+        const serverNameDict = {
+            "name": domserverSelect.value
+        }
+
+        return serverNameDict;
+    }
+
+    function getProblemID() {
+        let problemHiddenID = document.querySelectorAll('input[name="problemHiddenID"]');
+        let values = Array.from(problemHiddenID).map(function(inp) {
+            return inp.value;
+        });
+
+        return values;
+    }
+
+    function updateContestSelect(contestsData){
+        for(key in contestsData){
+            contestsSelect.innerHTML += `<option value="${contestsData[key]}">${key}</option>;`
+        }
+
+        inputSubmit.disabled = false
+    }
+
+    function updateProblemTable(uploadProblemInfo){
+        let html = '';
+        let index = 0;
+        for (let key in uploadProblemInfo) {
+            const items = uploadProblemInfo[key];
+            html += `
+                <tr class="problemTableTr">
+                <input type="hidden" name="problemHiddenID" value="${items.problem_id}">
+                <th scope="row">${index + 1}</th>
+                <td>${key}</td>
+                <td>${items.web_problem_state == '新增' ? '已上傳' : '未上傳'}</td>
+                <td>${items.web_problem_state == '新增' ? '<button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">移除</button>' : ''}</td>
+                </tr>
+            `;
+            index++;
+        }
+        // 假設你的表格的 id 是 'myTable'
+        document.querySelector('#problemTable').innerHTML = html;
+    }
+
+    function alertError(error, errorMessage){
+        if(error){
+            console.error('Error:', error);
+        }
+
+        contentHeader.innerHTML += `
+        <div class="alert alert-danger" role="alert">
+        ${errorMessage}
+        </div>
+        `
+    }
+
+    function formValidation(){
+        const problemTableTr = document.querySelectorAll('.problemTableTr');
+        if (problemTableTr.length < 1) {
+            alertError(null, '請先選擇題目！！');
+            return false;
+        }
+
+        const errorButton = document.querySelectorAll('[name="errorButton"]');
+        if (errorButton.length > 0) {
+            alertError(null, '請先移除未上傳的題目！！');
+            return false;
+        }
+    }
+
+    const domserverSelect = document.querySelector('[name="domserver"]');
+    const contestsSelect = document.querySelector('[name="contests"]');
+    const contentHeader = document.querySelector('.content-header');
+    const inputSubmit = document.querySelector('#input_submit');
+    const csrfToken = "{{ csrf_token }}";
+    
+    document.querySelector('#form').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        if(formValidation() === false){
+            return;
+        }
+
+        const problemIDArray = getProblemID();
+        const problemIDJson = JSON.stringify(problemIDArray);
+        document.querySelector('[name="problemIdHidden"]').value = problemIDJson;
+
+        this.submit();
+    });
+
+    domserverSelect.addEventListener('change', function() {
+        const serverNameDict = getServerName();
+        const problemIDArray = getProblemID();
+
+        fetch("/contests-list/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({
+                "serverNameDict": serverNameDict,
+                "problemIDArray": problemIDArray,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const contestsData = data.contests_data;
+            const uploadProblemInfo = data.upload_problem_info;
+        
+            updateContestSelect(contestsData);
+            updateProblemTable(uploadProblemInfo);
+        })
+
+        .catch(error => {
+            alertError(error, '考試選擇區域讀取錯誤！！');            
+        });
+    });
+
+</script>
+
+{% endblock %}

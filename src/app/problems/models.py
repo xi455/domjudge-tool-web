@@ -102,18 +102,18 @@ class ProblemServerLog(models.Model):
         on_delete=models.CASCADE,
         related_name="problem_log",
         verbose_name="題目紀錄",
-        editable=False,
+        # editable=False,
     )
     server_client = models.ForeignKey(
         DomServerClient,
         on_delete=models.CASCADE,
         related_name="server_log",
         verbose_name="伺服器紀錄",
-        editable=False,
+        # editable=False,
     )
     # web_problem_shortname = models.CharField("網站題目代號", max_length=68)
     web_problem_id = models.CharField("網站題目ID", max_length=68)
-    web_problem_contest = models.CharField("網站比賽區號", max_length=68)
+    web_problem_contest_cid = models.CharField("網站競賽區CID", max_length=68)
 
     class state(models.TextChoices):
         FIRST_STATE = "新增", "新增"
@@ -127,4 +127,4 @@ class ProblemServerLog(models.Model):
     )
 
     def __str__(self):
-        return f"{self.problem}"
+        return f"{self.problem} - {self.server_client} - {self.web_problem_id}"

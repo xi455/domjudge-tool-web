@@ -6,7 +6,7 @@ from django_object_actions import DjangoObjectActions, action
 from pydantic import BaseModel
 
 from app.domservers.models import DomServerClient
-from utils.admins import create_problem_crawler, testcase_md5
+from utils.admins import create_problem_crawler, testcase_md5, upload_problem_info_process
 
 from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
@@ -29,7 +29,7 @@ class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
         "problem",
         "server_client",
         "web_problem_id",
-        "web_problem_contest",
+        "web_problem_contest_cid",
         "web_problem_state",
     )
 
@@ -51,7 +51,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_filter = ("create_at", "update_at")
     search_fields = ("name", "short_name")
     inlines = [ProblemInOutInline]
-    readonly_fields = ("id", "owner", "update_illustrate", "web_problem_id")
+    readonly_fields = ("id", "owner", "update_illustrate")
     fieldsets = (
         (
             None,
@@ -67,7 +67,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                     "short_name",
                     "description_file",
                     "time_limit",
-                    "web_problem_id",
                 ),
             },
         ),
@@ -204,52 +203,36 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def upload_selected_problem(self, request, queryset):
-        dom_server_objects_all = DomServerClient.objects.all()
-        dom_server_name = [obj.name for obj in dom_server_objects_all]
+            """
+            Uploads the selected problem to a server.
 
-        used_contest_name_dict = dict()
-        process = False
-        for query in queryset:
+            Args:
+                request (HttpRequest): The HTTP request object.
+                queryset (QuerySet): The selected problems to be uploaded.
 
-            contest_list = list()
-            if query.is_processed:
-                process = True
-                problem_contest_info_list = list()
-                problem_log_all = query.problem_log.all().order_by("-id")
+            Returns:
+                Return the selected problem to the upload_process.html page.
+            """
+            server_objects = DomServerClient.objects.filter(owner=request.user).order_by("id")
+            
+            if not server_objects:
+                return messages.error(request, "請先新增伺服器資訊！！")
 
-                for problem_log_object in problem_log_all:
-                    if problem_log_object.web_problem_contest not in contest_list:
-                        contest_list.append(problem_log_object.web_problem_contest)
-
-                        if problem_log_object.web_problem_state == "新增":
-                            problem_contest_info_list.append(
-                                f"{problem_log_object.server_client}({problem_log_object.web_problem_contest})"
-                            )
-
-                if problem_contest_info_list:
-                    used_contest_name_dict[query.name] = ", ".join(
-                        problem_contest_info_list
-                    )
-
-        contest_name = None
-        if dom_server_objects_all:
-            problem_crawler = create_problem_crawler(dom_server_objects_all[0])
+            first_server_object = server_objects[0]
+            problem_crawler = create_problem_crawler(first_server_object)
+            
             data = problem_crawler.get_contests_list_all()
+            contest_name = [(name, obj.contest_id) for name, obj in data.items()]
 
-            contest_name = [(name, obj.conteset_id) for name, obj in data.items()]
+            problem_info = upload_problem_info_process(queryset=queryset, server_object=first_server_object)
 
-        id_list = request.POST.getlist("_selected_action")
-        upload_objects = Problem.objects.filter(id__in=id_list)
+            context = {
+                "problem_info": problem_info,
+                "server_client_name": [obj.name for obj in server_objects],
+                "contest_name": contest_name,
+            }
 
-        context = {
-            "process": process,
-            "upload_objects": upload_objects,
-            "update_problem_name": used_contest_name_dict,
-            "dom_server_name": dom_server_name,
-            "contest_name": contest_name,
-        }
-
-        return render(request, "admin/upload_process.html", context)
+            return render(request, "upload_process.html", context)
 
     upload_selected_problem.short_description = "上傳所選的 題目"
 
@@ -285,7 +268,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         problem_crawler = create_problem_crawler(server_client=server_clients[0])
 
         data = problem_crawler.get_contests_list_all()
-        contest_name = {(name, obj.conteset_id) for name, obj in data.items()}
+        contest_name = {(name, obj.contest_id) for name, obj in data.items()}
 
         context = {
             "updown_objects": updown_contest_objects,

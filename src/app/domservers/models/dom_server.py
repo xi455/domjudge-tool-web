@@ -8,7 +8,7 @@ from utils.models import BaseModel
 
 
 class DomServerClient(BaseModel):
-    name = models.CharField("主機名稱", max_length=255)
+    name = models.CharField("主機名稱", max_length=255, unique=True)
     host = models.URLField(
         "Dom server URL",
         help_text="https://domserver.example.com",

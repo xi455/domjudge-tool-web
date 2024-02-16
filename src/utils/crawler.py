@@ -19,8 +19,8 @@ class TestCase(BaseModel):
 
 
 class ServerContest(BaseModel):
-    conteset_name: str
-    conteset_id: str
+    contest_name: str
+    contest_id: str
 
 
 class ContestInfo(BaseModel):
@@ -354,8 +354,8 @@ class ProblemCrawler:
             web_contest_name = td_elements[1].text.strip()
 
             contest_info = {
-                "conteset_name": web_contest_name,
-                "conteset_id": web_contest_id,
+                "contest_name": web_contest_name,
+                "contest_id": web_contest_id,
             }
 
             server_contest = ServerContest(**contest_info)

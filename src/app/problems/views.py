@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 
 from app.domservers.models.dom_server import DomServerClient
-from utils.admins import create_problem_crawler
+from utils.admins import create_problem_crawler, upload_problem_info_process
 
 from .forms import ServerClientForm
 from .models import Problem, ProblemServerLog
@@ -24,119 +24,58 @@ def get_zip(request, pk):
 
 
 @require_http_methods(["POST"])
-def problem_view(request):
-    upload_objects_id = request.POST.getlist("upload_objects_id")
+def problem_upload_view(request):
+    # TEST--------------------------------------------------
+    problem_id_list = json.loads(request.POST.get("problemIdHidden"))
     domserver_name = request.POST.get("domserver")
-    contests_id = request.POST.get("contests")
+    contest_id = request.POST.get("contests")
 
     server_client = get_object_or_404(DomServerClient, name=domserver_name)
-
     problem_crawler = create_problem_crawler(server_client)
 
-    upload_problem_obj_list = list()
-    upload_files_info_list = list()
-    upload_server_log_obj_list = list()
+    for id in problem_id_list:
+        problem_obj = get_object_or_404(Problem, pk=id)
+        response_zip = build_zip_response(problem_obj)
 
-    update_server_log_obj_list = list()
-    update_contest_problem_obj_list = list()
-    update_contest_problem_info_dict = dict()
+        problem_zip = b"".join(response_zip.streaming_content)
 
-    contest_problem_count = problem_crawler.get_contest_problem_count(
-        contest_id=contests_id
-    )
-
-    for pk in upload_objects_id:
-        problem_obj = get_object_or_404(Problem, pk=pk)
-
-        if problem_obj.is_processed:
-            update_contest_problem_obj_list.append(problem_obj)
-            update_contest_problem_info_dict.update(
-                {
-                    f"contest[problems][{contest_problem_count}][problem]": problem_obj.web_problem_id,
-                    f"contest[problems][{contest_problem_count}][shortname]": problem_obj.short_name,
-                    f"contest[problems][{contest_problem_count}][points]": "1",
-                    f"contest[problems][{contest_problem_count}][allowSubmit]": "1",
-                    f"contest[problems][{contest_problem_count}][allowJudge]": "1",
-                    f"contest[problems][{contest_problem_count}][color]": "",
-                    f"contest[problems][{contest_problem_count}][lazyEvalResults]": "0",
-                }
+        upload_files_info_list = [
+            (
+                "problem_upload_multiple[archives][]",
+                (problem_obj.name, problem_zip, "application/zip"),
             )
-            contest_problem_count += 1
-        else:
-            upload_problem_obj_list.append(problem_obj)
-            response_zip = build_zip_response(problem_obj)
+        ]
 
-            content = b"".join(response_zip.streaming_content)
-
-            upload_files_info_list.append(
-                (
-                    "problem_upload_multiple[archives][]",
-                    (problem_obj.name, content, "application/zip"),
-                )
-            )
-
-    if update_contest_problem_info_dict:
-        response = problem_crawler.contest_problem_upload(
-            contest_id=contests_id, problem_data=update_contest_problem_info_dict
-        )
-        if response is None:
-            for index in range(len(update_contest_problem_obj_list)):
-                web_problem_id = None
-                update_problem_log_all = update_contest_problem_obj_list[
-                    index
-                ].problem_log.all()
-                for problem_log_obj in update_problem_log_all:
-                    if problem_log_obj.server_client == server_client:
-                        web_problem_id = problem_log_obj.web_problem_id
-                        break
-
-                new_problem_log_obj = ProblemServerLog(
-                    problem=update_contest_problem_obj_list[index],
-                    server_client=server_client,
-                    web_problem_contest=problem_crawler.get_contest_name(
-                        contests_id=contests_id
-                    ),
-                    web_problem_state="新增",
-                    web_problem_id=web_problem_id,
-                )
-                update_server_log_obj_list.append(new_problem_log_obj)
-
-            Problem.objects.bulk_update(upload_problem_obj_list, ["web_problem_id"])
-            ProblemServerLog.objects.bulk_create(update_server_log_obj_list)
-
-            messages.success(request, "題目更新成功！！")
-        else:
-            messages.error(request, "題目重複！！ 請重新選擇新題目上傳")
-
-    if upload_files_info_list:
         (is_success, problem_id_list, contest_id,) = problem_crawler.upload_problem(
-            files=upload_files_info_list, contest_id=contests_id
+            files=upload_files_info_list, contest_id=contest_id
         )
 
-        if is_success:
-            for index in range(len(upload_problem_obj_list)):
-                upload_problem_obj_list[index].is_processed = True
-                upload_problem_obj_list[index].web_problem_id = problem_id_list[index]
+        print(is_success, problem_id_list, contest_id)
 
-                new_problem_log_obj = ProblemServerLog(
-                    problem=upload_problem_obj_list[index],
-                    server_client=server_client,
-                    web_problem_id=problem_id_list[index],
-                    web_problem_state="新增",
-                    web_problem_contest=problem_crawler.get_contest_name(contest_id),
-                )
+        # if is_success:
+        #     problem_obj.is_processed = True
+        #     problem_obj.web_problem_id = problem_id_list[0]
 
-                upload_server_log_obj_list.append(new_problem_log_obj)
+        #     new_problem_log_obj = ProblemServerLog(
+        #         problem=problem_obj,
+        #         server_client=server_client,
+        #         web_problem_id=problem_id_list[0],
+        #         web_problem_state="新增",
+        #         web_problem_contest=problem_crawler.get_contest_name(contest_id),
+        #     )
 
-            Problem.objects.bulk_update(
-                upload_problem_obj_list, ["is_processed", "web_problem_id"]
-            )
-            ProblemServerLog.objects.bulk_create(upload_server_log_obj_list)
+        #     Problem.objects.bulk_update(
+        #         [problem_obj], ["is_processed", "web_problem_id"]
+        #     )
+        #     ProblemServerLog.objects.bulk_create([new_problem_log_obj])
 
-            messages.success(request, "題目上傳成功！！")
-        else:
-            messages.error(request, "題目重複！！ 請重新選擇新題目上傳")
+        #     messages.success(request, "題目上傳成功！！")
+        # else:
+        #     messages.error(request, "題目上傳失敗！！")
+    
     return redirect("/admin/problems/problem/")
+
+    # TEST END--------------------------------------------------
 
 
 @require_http_methods(["POST"])
@@ -186,22 +125,45 @@ def problem_contest_view(request):
 
 
 @require_http_methods(["POST"])
-def contests_list_view(request):
-    selected_contests_data = json.loads(request.body.decode("utf-8"))
+def get_contests_info_and_problem_info_api(request):
+    """
+    View function to retrieve contests data and upload problem information.
 
-    form = ServerClientForm(selected_contests_data)
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        JsonResponse: The JSON response containing contests data and upload problem information.
+    """
+
+    data = json.loads(request.body.decode("utf-8"))
+    server_name_dict = data['serverNameDict']
+    problem_id_list = data['problemIDArray']
+
+    # __in 是 Django ORM 的一種查詢過濾器（Query Filter），它接受一個列表，並返回一個包含所有在該列表中的值的對象的 QuerySet。
+    
+    form = ServerClientForm(server_name_dict)
 
     if form.is_valid():
+        queryset = Problem.objects.filter(id__in=problem_id_list)
+        server_object = get_object_or_404(DomServerClient, name=server_name_dict["name"])
+        upload_problem_info = upload_problem_info_process(queryset=queryset, server_object=server_object)
+        
         contest_name = form.cleaned_data.get("name", None)
         serverclient = get_object_or_404(DomServerClient, name=contest_name)
         problem_crawler = create_problem_crawler(server_client=serverclient)
 
         server_contests_info_dict = problem_crawler.get_contests_list_all()
         contests_data = {
-            key: obj.conteset_id for key, obj in server_contests_info_dict.items()
+            key: obj.contest_id for key, obj in server_contests_info_dict.items()
         }
 
-        return JsonResponse(contests_data)
+        response_data = {
+            "contests_data": contests_data,
+            "upload_problem_info": upload_problem_info,
+        }
+
+        return JsonResponse(response_data, status=200)
     else:
         errors = form.errors
         return JsonResponse({"errors": errors}, status=400)

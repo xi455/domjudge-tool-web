@@ -68,3 +68,34 @@ def get_contest_all_and_page_obj(getdata, problem_crawler):
     page_obj = get_page_obj(getdata, obj_list=contest_info_list)
 
     return page_obj
+
+def upload_problem_info_process(queryset, server_object):
+    """
+    Process the upload of problem information for a given queryset and server object.
+
+    Args:
+        queryset (QuerySet): The queryset containing the problems to upload information for.
+        server_object (Server): The server object representing the server to upload information to.
+
+    Returns:
+        dict: A dictionary containing the upload information for each problem in the queryset.
+              The dictionary has the following structure:
+              {
+                  "problem_name": {
+                      "web_problem_state": "The web problem state",
+                      "problem_id": "The problem ID"
+                  },
+                  ...
+              }
+    """
+    upload_problem_info = dict()
+    for query in queryset:
+        problem_record_object = query.problem_log.filter(server_client=server_object).order_by("-id").first()
+        web_problem_state = problem_record_object.web_problem_state if problem_record_object else "移除"
+
+        upload_problem_info[query.name] = {
+            "web_problem_state": web_problem_state,
+            "problem_id": query.id,
+        }
+
+    return upload_problem_info

@@ -17,6 +17,9 @@ class ServerClientForm(forms.ModelForm):
         model = DomServerClient
         fields = ["name"]
 
+    def validate_unique(self) -> None:
+        pass
+
 
 class ProblemNameForm(forms.ModelForm):
     class Meta:
