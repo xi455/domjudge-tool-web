@@ -131,5 +131,4 @@ JAZZMIN_SETTINGS: dict = {
     },
     # Add a language dropdown into the admin
     "language_chooser": False,
-
 }

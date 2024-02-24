@@ -3,7 +3,6 @@ from django.core.validators import FileExtensionValidator, ValidationError
 from django.db import models
 
 from app.domservers.models import DomServerClient
-
 from utils.models import BaseModel
 
 

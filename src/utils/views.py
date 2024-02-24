@@ -1,10 +1,12 @@
 import json
-from django.contrib import admin
-from app.users.models import User
-from app.domservers.models import ContestRecord
-from app.domservers import exceptions as domserver_exceptions
 
+from django.contrib import admin
+
+from app.domservers import exceptions as domserver_exceptions
+from app.domservers.models import ContestRecord
+from app.users.models import User
 from utils.exceptions import CrawlerHandleContestShortNameException
+
 
 def get_available_apps(request):
     """
@@ -20,6 +22,7 @@ def get_available_apps(request):
     available_apps = site.each_context(request).get("available_apps")
     print("available_apps:", available_apps)
     return available_apps
+
 
 def contest_problem_shortname_process(form_data):
     """
@@ -50,11 +53,14 @@ def contest_problem_shortname_process(form_data):
             contest_info[problem_shortname] = data["shortname"]
 
         return contest_info
-    
+
     except Exception:
         raise CrawlerHandleContestShortNameException("Process Contest Shortname Failed")
 
-def create_contest_record(request, problem_crawler, contest_shortname=None, server_client_id=None):
+
+def create_contest_record(
+    request, problem_crawler, contest_shortname=None, server_client_id=None
+):
     """
     Create a contest record.
 
@@ -72,11 +78,13 @@ def create_contest_record(request, problem_crawler, contest_shortname=None, serv
     """
     try:
         if not contest_shortname:
-            contest_shortname = contest_problem_shortname_process(form_data=request.POST).get("contest[shortname]")
+            contest_shortname = contest_problem_shortname_process(
+                form_data=request.POST
+            ).get("contest[shortname]")
 
         if not server_client_id:
             server_client_id = request.POST.get("server_client_id")
-        
+
         cid = problem_crawler.get_contest_name_cid(contest_shortname=contest_shortname)
         owner = User.objects.get(username=request.user)
 
@@ -89,4 +97,6 @@ def create_contest_record(request, problem_crawler, contest_shortname=None, serv
         contest_record.save()
 
     except Exception:
-        raise domserver_exceptions.ContestRecordException("Create Contest Record Failed")
+        raise domserver_exceptions.ContestRecordException(
+            "Create Contest Record Failed"
+        )

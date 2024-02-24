@@ -27,7 +27,11 @@ from app.domservers.views import (
     contest_problem_upload_edit_view,
     contest_problem_upload_view,
 )
-from app.problems.views import get_contests_info_and_problem_info_api, problem_contest_view, problem_upload_view
+from app.problems.views import (
+    get_contests_info_and_problem_info_api,
+    problem_contest_view,
+    problem_upload_view,
+)
 from app.users import views as user_views
 from core.docs import DEFAULT_API_DOC_URL, SchemaView
 
@@ -51,7 +55,9 @@ urlpatterns = [
     path(
         "problem-contest_updown/", problem_contest_view, name="problem_contest_updown"
     ),
-    path("contests-list/", get_contests_info_and_problem_info_api, name="contests_list"),
+    path(
+        "contests-list/", get_contests_info_and_problem_info_api, name="contests_list"
+    ),
     path("contest/create/", contest_create_view, name="contest_create"),
     path(
         "contest-problem/shortname/create/",

@@ -1,8 +1,9 @@
 import hashlib
 
+from django.core.paginator import Paginator
+
 # from app.problems.crawler import ProblemCrawler
 from utils.crawler import ProblemCrawler
-from django.core.paginator import Paginator
 
 
 class DomjudgeUser:
@@ -33,11 +34,13 @@ def action_display(
     else:
         return decorator(function)
 
+
 def testcase_md5(testcase):
     encoded_string = testcase.encode("utf-8")
     testcase_md5_hash = hashlib.md5(encoded_string).hexdigest()
 
     return testcase_md5_hash
+
 
 def create_problem_crawler(server_client):
 
@@ -47,11 +50,13 @@ def create_problem_crawler(server_client):
 
     return ProblemCrawler(url, username, password)
 
+
 def get_contest_all(problem_crawler):
     contest_dicts = problem_crawler.get_contest_all()
     contest_info_list = list(contest_dicts.values())
 
     return contest_info_list
+
 
 def get_page_obj(getdata, obj_list):
     paginator = Paginator(obj_list, 8)
@@ -59,6 +64,7 @@ def get_page_obj(getdata, obj_list):
     page_obj = paginator.get_page(page)
 
     return page_obj
+
 
 def get_contest_all_and_page_obj(getdata, problem_crawler):
     # 獲取所有比賽信息
@@ -68,6 +74,7 @@ def get_contest_all_and_page_obj(getdata, problem_crawler):
     page_obj = get_page_obj(getdata, obj_list=contest_info_list)
 
     return page_obj
+
 
 def upload_problem_info_process(queryset, server_object):
     """
@@ -90,8 +97,14 @@ def upload_problem_info_process(queryset, server_object):
     """
     upload_problem_info = dict()
     for query in queryset:
-        problem_record_object = query.problem_log.filter(server_client=server_object).order_by("-id").first()
-        web_problem_state = problem_record_object.web_problem_state if problem_record_object else "移除"
+        problem_record_object = (
+            query.problem_log.filter(server_client=server_object)
+            .order_by("-id")
+            .first()
+        )
+        web_problem_state = (
+            problem_record_object.web_problem_state if problem_record_object else "移除"
+        )
 
         upload_problem_info[query.name] = {
             "web_problem_state": web_problem_state,

@@ -3,16 +3,15 @@ from django.shortcuts import render
 from django_object_actions import DjangoObjectActions, action
 
 from app.domservers.forms import DomServerAccountForm
-from app.domservers.models import DomServerClient, ContestRecord
+from app.domservers.models import ContestRecord, DomServerClient
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
-from django_object_actions import DjangoObjectActions
 
 # Register your models here.
+
 
 @admin.register(ContestRecord)
 class ContestRecordAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_display = [field.name for field in ContestRecord._meta.get_fields()]
-
 
 
 @admin.register(DomServerClient)
@@ -48,15 +47,15 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
         problem_crawler = create_problem_crawler(obj)
         getdata = request.GET
         page_obj = get_contest_all_and_page_obj(getdata, problem_crawler)
-        
+
         context = {
             "page_obj": page_obj,  # 將 page_obj 加入到上下文中
             "server_client_name": obj.name,
             "server_client_id": obj.id,
-
             "opts": obj._meta,  # 獲取模型的應用標籤
-            "available_apps": self.admin_site.each_context(request).get("available_apps"),  # 獲取 sidebar 所有應用
+            "available_apps": self.admin_site.each_context(request).get(
+                "available_apps"
+            ),  # 獲取 sidebar 所有應用
         }
-
 
         return render(request, "contest_list.html", context)

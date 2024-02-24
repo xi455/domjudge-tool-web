@@ -1,4 +1,4 @@
-from app.domservers.models.dom_server import DomServerClient, ContestRecord
+from app.domservers.models.dom_server import ContestRecord, DomServerClient
 
 __all__ = [
     "DomServerClient",

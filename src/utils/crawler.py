@@ -7,9 +7,11 @@ from typing import Optional
 import requests
 
 from bs4 import BeautifulSoup
+from django.contrib import messages
 from pydantic import BaseModel, validator
 
 import app.problems.exceptions as problems_exceptions
+
 from utils import exceptions as utils_exceptions
 
 
@@ -110,20 +112,20 @@ class ProblemCrawler:
         raise problems_exceptions.ProblemDownloaderLoginException("登入失敗")
 
     def misjudgment(self, soup):
-            """
-            Determine whether there are upload errors.
+        """
+        Determine whether there are upload errors.
 
-            Args:
-                soup (BeautifulSoup): The BeautifulSoup object representing the HTML page.
+        Args:
+            soup (BeautifulSoup): The BeautifulSoup object representing the HTML page.
 
-            Returns:
-                bool: True if there are no upload errors, False otherwise.
-            """
-            error_elements = soup.select_one(".form-error-message")
-            if error_elements:
-                return False
-            else:
-                return True
+        Returns:
+            bool: True if there are no upload errors, False otherwise.
+        """
+        error_elements = soup.select_one(".form-error-message")
+        if error_elements:
+            return False
+        else:
+            return True
 
     def get_contest_name(self, contests_id):
         page = self.session.get(self.url + ConTestPath.GET)
@@ -157,7 +159,7 @@ class ProblemCrawler:
         for key, value in contests.items():
             if value.shortname == contest_shortname:
                 return value.CID
-            
+
         raise utils_exceptions.CrawlerGetContestCidException("找不到對應的考區ID")
 
     def get_contest_all(self):
@@ -228,6 +230,19 @@ class ProblemCrawler:
 
         return problem_data_dict
 
+    def validate_problem_name_repeat(self, problem_name_list):
+        result = []
+        problem_dict = self.get_problems()
+        problem_name = problem_dict.keys()
+        for name in problem_name_list:
+            if name in problem_name:
+                result.append(name)
+
+        if result:
+            return False, result
+
+        return True, None
+
     def upload_problem(self, files, contest_id):
 
         data = {
@@ -238,30 +253,34 @@ class ProblemCrawler:
         for file_name in files:
             problem_name_list.append(file_name[1][0])
 
+        is_valid, repeat_name_list = self.validate_problem_name_repeat(
+            problem_name_list
+        )
+        if not is_valid:
+            repeat_name = ", ".join(repeat_name_list)
+            message = f"上傳失敗！！{repeat_name} 題目名稱重複。"
+            return False, {}, contest_id, message
+
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
         soup = BeautifulSoup(page.text, "html.parser")
+
         alert = soup.select_one(".alert-dismissible").get("class")
 
         if "alert-info" in alert:
             is_succeed = True
         else:
-            is_succeed = False
+            message = "題目上傳失敗！！"
+            return False, {}, contest_id, message
 
-        page = self.session.get(self.url + ProblemPath.GET)
-        soup = BeautifulSoup(page.text, "html.parser")
+        result_problems_info_dict = dict()
+        problems_dict = self.get_problems()
+        problems_key = problems_dict.keys()
+        for name in problem_name_list:
+            if name in problems_key:
+                result_problems_info_dict[name] = problems_dict[name].id
 
-        problem_id_list = []
-        td_elements = soup.select("table td")
-        for td in td_elements:
-            for name in problem_name_list:
-                text = td.text.strip()
-
-                if text == name:
-                    problem_id_list.append(
-                        td.select_one("a").get("href").split("/")[-1]
-                    )
-
-        return is_succeed, problem_id_list, contest_id
+        message = "題目上傳成功！！"
+        return is_succeed, result_problems_info_dict, contest_id, message
 
     def problem_format_process(self, problem_data):
         problem_information = dict()

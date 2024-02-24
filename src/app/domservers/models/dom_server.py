@@ -74,6 +74,7 @@ class DomServerClient(BaseModel):
         verbose_name = "Dom Server 連線資訊"
         verbose_name_plural = "Dom Server 連線資訊"
 
+
 class ContestRecord(BaseModel):
     owner = models.ForeignKey(
         "users.User",

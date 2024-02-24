@@ -6,7 +6,11 @@ from django_object_actions import DjangoObjectActions, action
 from pydantic import BaseModel
 
 from app.domservers.models import DomServerClient
-from utils.admins import create_problem_crawler, testcase_md5, upload_problem_info_process
+from utils.admins import (
+    create_problem_crawler,
+    testcase_md5,
+    upload_problem_info_process,
+)
 
 from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
@@ -45,7 +49,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         "time_limit",
         "owner",
         "id",
-        "is_processed",
         "make_zip",
     )
     list_filter = ("create_at", "update_at")
@@ -203,36 +206,40 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def upload_selected_problem(self, request, queryset):
-            """
-            Uploads the selected problem to a server.
+        """
+        Uploads the selected problem to a server.
 
-            Args:
-                request (HttpRequest): The HTTP request object.
-                queryset (QuerySet): The selected problems to be uploaded.
+        Args:
+            request (HttpRequest): The HTTP request object.
+            queryset (QuerySet): The selected problems to be uploaded.
 
-            Returns:
-                Return the selected problem to the upload_process.html page.
-            """
-            server_objects = DomServerClient.objects.filter(owner=request.user).order_by("id")
-            
-            if not server_objects:
-                return messages.error(request, "請先新增伺服器資訊！！")
+        Returns:
+            Return the selected problem to the upload_process.html page.
+        """
+        server_objects = DomServerClient.objects.filter(owner=request.user).order_by(
+            "id"
+        )
 
-            first_server_object = server_objects[0]
-            problem_crawler = create_problem_crawler(first_server_object)
-            
-            data = problem_crawler.get_contests_list_all()
-            contest_name = [(name, obj.contest_id) for name, obj in data.items()]
+        if not server_objects:
+            return messages.error(request, "請先新增伺服器資訊！！")
 
-            problem_info = upload_problem_info_process(queryset=queryset, server_object=first_server_object)
+        first_server_object = server_objects[0]
+        problem_crawler = create_problem_crawler(first_server_object)
 
-            context = {
-                "problem_info": problem_info,
-                "server_client_name": [obj.name for obj in server_objects],
-                "contest_name": contest_name,
-            }
+        data = problem_crawler.get_contests_list_all()
+        contest_name = [(name, obj.contest_id) for name, obj in data.items()]
 
-            return render(request, "upload_process.html", context)
+        problem_info = upload_problem_info_process(
+            queryset=queryset, server_object=first_server_object
+        )
+
+        context = {
+            "problem_info": problem_info,
+            "server_client_name": [obj.name for obj in server_objects],
+            "contest_name": contest_name,
+        }
+
+        return render(request, "upload_process.html", context)
 
     upload_selected_problem.short_description = "上傳所選的 題目"
 
@@ -286,8 +293,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         upload_server_log_obj_list = list()
 
         for problem_obj in queryset:
-            problem_obj.is_processed = False
-            problem_obj.web_problem_id = None
             problem_log_all = problem_obj.problem_log.all().order_by("-id")
 
             del_problem_id_list = list()
@@ -326,7 +331,5 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
             for problem_log_obj in problem_log_obj_list:
                 problem_crawler.delete_problem(id=problem_log_obj.web_problem_id)
-
-        Problem.objects.bulk_update(queryset, ["is_processed", "web_problem_id"])
 
     updown_selected_problem.short_description = "撤銷所選的 題目"

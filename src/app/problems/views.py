@@ -7,7 +7,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 
 from app.domservers.models.dom_server import DomServerClient
+from app.users.models import User
 from utils.admins import create_problem_crawler, upload_problem_info_process
+from utils.problems.views import create_problem_log, handle_problems_upload_info
 
 from .forms import ServerClientForm
 from .models import Problem, ProblemServerLog
@@ -25,57 +27,45 @@ def get_zip(request, pk):
 
 @require_http_methods(["POST"])
 def problem_upload_view(request):
-    # TEST--------------------------------------------------
     problem_id_list = json.loads(request.POST.get("problemIdHidden"))
     domserver_name = request.POST.get("domserver")
     contest_id = request.POST.get("contests")
 
+    owner_obj = get_object_or_404(User, username=request.user)
     server_client = get_object_or_404(DomServerClient, name=domserver_name)
     problem_crawler = create_problem_crawler(server_client)
 
-    for id in problem_id_list:
-        problem_obj = get_object_or_404(Problem, pk=id)
-        response_zip = build_zip_response(problem_obj)
+    problem_data = {
+        "problem_id_list": problem_id_list,
+        "owner_obj": owner_obj,
+        "server_client": server_client,
+        "contest_id": contest_id,
+    }
 
-        problem_zip = b"".join(response_zip.streaming_content)
+    problems_upload_info, problems_obj_data_dict = handle_problems_upload_info(
+        problem_data=problem_data
+    )
 
-        upload_files_info_list = [
-            (
-                "problem_upload_multiple[archives][]",
-                (problem_obj.name, problem_zip, "application/zip"),
-            )
-        ]
+    (
+        is_success,
+        problems_info_dict,
+        contest_id,
+        message,
+    ) = problem_crawler.upload_problem(
+        files=problems_upload_info, contest_id=contest_id
+    )
 
-        (is_success, problem_id_list, contest_id,) = problem_crawler.upload_problem(
-            files=upload_files_info_list, contest_id=contest_id
-        )
+    if not is_success:
+        messages.error(request, message)
+        return redirect("/admin/problems/problem/")
+    messages.success(request, message)
 
-        print(is_success, problem_id_list, contest_id)
+    for pname, pid in problems_info_dict.items():
+        problems_obj_data_dict[pname].update({"web_problem_id": pid})
 
-        # if is_success:
-        #     problem_obj.is_processed = True
-        #     problem_obj.web_problem_id = problem_id_list[0]
+    create_problem_log(problems_obj_data_dict=problems_obj_data_dict)
 
-        #     new_problem_log_obj = ProblemServerLog(
-        #         problem=problem_obj,
-        #         server_client=server_client,
-        #         web_problem_id=problem_id_list[0],
-        #         web_problem_state="新增",
-        #         web_problem_contest=problem_crawler.get_contest_name(contest_id),
-        #     )
-
-        #     Problem.objects.bulk_update(
-        #         [problem_obj], ["is_processed", "web_problem_id"]
-        #     )
-        #     ProblemServerLog.objects.bulk_create([new_problem_log_obj])
-
-        #     messages.success(request, "題目上傳成功！！")
-        # else:
-        #     messages.error(request, "題目上傳失敗！！")
-    
     return redirect("/admin/problems/problem/")
-
-    # TEST END--------------------------------------------------
 
 
 @require_http_methods(["POST"])
@@ -137,18 +127,22 @@ def get_contests_info_and_problem_info_api(request):
     """
 
     data = json.loads(request.body.decode("utf-8"))
-    server_name_dict = data['serverNameDict']
-    problem_id_list = data['problemIDArray']
+    server_name_dict = data["serverNameDict"]
+    problem_id_list = data["problemIDArray"]
 
     # __in 是 Django ORM 的一種查詢過濾器（Query Filter），它接受一個列表，並返回一個包含所有在該列表中的值的對象的 QuerySet。
-    
+
     form = ServerClientForm(server_name_dict)
 
     if form.is_valid():
         queryset = Problem.objects.filter(id__in=problem_id_list)
-        server_object = get_object_or_404(DomServerClient, name=server_name_dict["name"])
-        upload_problem_info = upload_problem_info_process(queryset=queryset, server_object=server_object)
-        
+        server_object = get_object_or_404(
+            DomServerClient, name=server_name_dict["name"]
+        )
+        upload_problem_info = upload_problem_info_process(
+            queryset=queryset, server_object=server_object
+        )
+
         contest_name = form.cleaned_data.get("name", None)
         serverclient = get_object_or_404(DomServerClient, name=contest_name)
         problem_crawler = create_problem_crawler(server_client=serverclient)

@@ -8,15 +8,19 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
+from app.domservers import exceptions as domserver_exceptions
 from app.domservers.forms import DomServerContestCreatForm
 from app.domservers.models import DomServerClient
-from app.domservers import exceptions as domserver_exceptions
-
-from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
-from utils.views import get_available_apps, contest_problem_shortname_process, create_contest_record
 from utils import exceptions as utils_exceptions
+from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
+from utils.views import (
+    contest_problem_shortname_process,
+    create_contest_record,
+    get_available_apps,
+)
 
 # Create your views here.
+
 
 @require_http_methods(["GET", "POST"])
 def contest_create_view(request):
@@ -98,7 +102,9 @@ def contest_problem_upload_view(request, id):
 
     # get all contest
     getdata = request.GET
-    page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
+    page_obj = get_contest_all_and_page_obj(
+        getdata=getdata, problem_crawler=problem_crawler
+    )
 
     context = {
         "page_obj": page_obj,
@@ -271,7 +277,9 @@ def contest_problem_shortname_edit_view(request, id, cid):
 
     # get all contest
     getdata = request.GET
-    page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
+    page_obj = get_contest_all_and_page_obj(
+        getdata=getdata, problem_crawler=problem_crawler
+    )
 
     context = {
         "page_obj": page_obj,
@@ -451,11 +459,18 @@ def contest_problem_copy_view(request, id, cid):
         )
 
         # Create a new contest record
-        create_contest_record(request=request, problem_crawler=problem_crawler, contest_shortname=contest_problem_information_dict["contest[shortname]"], server_client_id=id)
+        create_contest_record(
+            request=request,
+            problem_crawler=problem_crawler,
+            contest_shortname=contest_problem_information_dict["contest[shortname]"],
+            server_client_id=id,
+        )
 
         # Get all contest
         getdata = request.GET
-        page_obj = get_contest_all_and_page_obj(getdata=getdata, problem_crawler=problem_crawler)
+        page_obj = get_contest_all_and_page_obj(
+            getdata=getdata, problem_crawler=problem_crawler
+        )
 
         context = {
             "page_obj": page_obj,
@@ -467,4 +482,6 @@ def contest_problem_copy_view(request, id, cid):
 
         return render(request, "contest_list.html", context)
     except Exception:
-        raise domserver_exceptions.ContestCopyException("Errors in copying the Contest area.")
+        raise domserver_exceptions.ContestCopyException(
+            "Errors in copying the Contest area."
+        )
