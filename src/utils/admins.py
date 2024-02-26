@@ -58,20 +58,28 @@ def get_contest_all(problem_crawler):
     return contest_info_list
 
 
-def get_page_obj(getdata, obj_list):
+def get_page_obj(request, obj_list):
     paginator = Paginator(obj_list, 8)
-    page = getdata.get("page")
+    page = request.GET.get("page")
     page_obj = paginator.get_page(page)
 
     return page_obj
 
 
-def get_contest_all_and_page_obj(getdata, problem_crawler):
+from app.domservers.models import ContestRecord
+def get_contest_all_and_page_obj(request, problem_crawler):
     # 獲取所有比賽信息
-    contest_info_list = get_contest_all(problem_crawler)
 
+    if request.user.is_superuser:
+        contest_info_list = [obj for obj in ContestRecord.objects.all()]
+    else:
+        contest_info_list = ContestRecord.objects.filter(owner=request.user)
+
+    print("contest_info_list:", contest_info_list)
+    # contest_info_list = get_contest_all(problem_crawler)
+    # print("contest_info_list:", contest_info_list)
     # 使用比賽信息列表來獲取分頁對象
-    page_obj = get_page_obj(getdata, obj_list=contest_info_list)
+    page_obj = get_page_obj(request, obj_list=contest_info_list)
 
     return page_obj
 
@@ -112,3 +120,14 @@ def upload_problem_info_process(queryset, server_object):
         }
 
     return upload_problem_info
+
+
+def get_newest_problems_log(obj):
+    newest_problem_log = obj.problem_log.all().order_by("-id")
+    problem_logs_list = list()
+
+    for obj in newest_problem_log:
+        if obj.web_problem_contest_cid not in problem_logs_list:
+            problem_logs_list.append(obj)
+
+    return newest_problem_log

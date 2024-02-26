@@ -1,10 +1,14 @@
+from typing import Any
 from django.contrib import admin
+from django.db.models.query import QuerySet
+from django.http import HttpRequest
 from django.shortcuts import render
 from django_object_actions import DjangoObjectActions, action
 
 from app.domservers.forms import DomServerAccountForm
 from app.domservers.models import ContestRecord, DomServerClient
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
+from utils.views import get_available_apps
 
 # Register your models here.
 
@@ -41,21 +45,26 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
             form.instance.mask_password = password_field
 
         return super().save_form(request, form, change)
+    
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:
+        queryset = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return queryset
+        
+        return queryset.filter(owner=request.user)
 
     @action(label="取得考區資訊")
     def get_contest_info(self, request, obj):
         problem_crawler = create_problem_crawler(obj)
-        getdata = request.GET
-        page_obj = get_contest_all_and_page_obj(getdata, problem_crawler)
+        page_obj = get_contest_all_and_page_obj(request, problem_crawler)
 
         context = {
             "page_obj": page_obj,  # 將 page_obj 加入到上下文中
             "server_client_name": obj.name,
             "server_client_id": obj.id,
             "opts": obj._meta,  # 獲取模型的應用標籤
-            "available_apps": self.admin_site.each_context(request).get(
-                "available_apps"
-            ),  # 獲取 sidebar 所有應用
+            "available_apps": get_available_apps(request),  # 獲取 sidebar 所有應用
         }
 
         return render(request, "contest_list.html", context)

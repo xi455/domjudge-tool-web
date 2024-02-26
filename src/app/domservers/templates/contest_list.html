@@ -49,9 +49,9 @@ delete-confirmation{%endblock %}
                                         <td>未開放</td>
                                     {% endif %}
                                     <td>
-                                        <a href="{% url 'contest_information_copy' server_client_id object.CID %}"
+                                        <a href="{% url 'contest_information_copy' server_client_id object.cid %}"
                                             class="btn btn-primary btn-sm">複製</a>
-                                        <a href="{% url 'contest_information_edit' server_client_id object.CID %}"
+                                        <a href="{% url 'contest_information_edit' server_client_id object.cid %}"
                                             class="btn btn-outline-primary btn-sm">編輯</a>
                                     </td>
                                 </tr>

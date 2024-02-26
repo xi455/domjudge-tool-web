@@ -20,8 +20,7 @@ def get_available_apps(request):
     """
     site = admin.site
     available_apps = site.each_context(request).get("available_apps")
-    print("available_apps:", available_apps)
-    return available_apps
+    return available_apps # 獲取 sidebar 所有應用
 
 
 def contest_problem_shortname_process(form_data):

@@ -101,9 +101,8 @@ def contest_problem_upload_view(request, id):
         messages.error(request, "考區創建失敗！！")
 
     # get all contest
-    getdata = request.GET
     page_obj = get_contest_all_and_page_obj(
-        getdata=getdata, problem_crawler=problem_crawler
+        request=request, problem_crawler=problem_crawler
     )
 
     context = {
@@ -276,9 +275,8 @@ def contest_problem_shortname_edit_view(request, id, cid):
         messages.error(request, "考區編輯失敗！！")
 
     # get all contest
-    getdata = request.GET
     page_obj = get_contest_all_and_page_obj(
-        getdata=getdata, problem_crawler=problem_crawler
+        request=request, problem_crawler=problem_crawler
     )
 
     context = {
@@ -467,9 +465,8 @@ def contest_problem_copy_view(request, id, cid):
         )
 
         # Get all contest
-        getdata = request.GET
         page_obj = get_contest_all_and_page_obj(
-            getdata=getdata, problem_crawler=problem_crawler
+            request=request, problem_crawler=problem_crawler
         )
 
         context = {

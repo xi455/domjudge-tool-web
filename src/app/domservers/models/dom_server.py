@@ -87,14 +87,14 @@ class ContestRecord(BaseModel):
         help_text="請輸入伺服器ID",
         editable=False,
     )
-    domjudge_contest_id = models.TextField(
+    cid = models.TextField(
         verbose_name="Domjudge考區ID",
         help_text="請輸入Domjudge考區ID",
         editable=False,
     )
 
     def __str__(self):
-        return f"Contest Record - User: {self.owner}, Domjudge Contest Cid: {self.domjudge_contest_id}"
+        return f"Contest Record - User: {self.owner}, Domjudge Contest Cid: {self.cid}"
 
     class Meta:
         verbose_name = "Contest 紀錄"

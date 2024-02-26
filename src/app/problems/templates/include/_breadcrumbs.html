@@ -1,0 +1,5 @@
+<ol class="breadcrumb float-sm-right">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:problems_problem_changelist' %}">{{ opts.verbose_name }}</a></li>
+</ol>

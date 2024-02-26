@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.shortcuts import render
+from django.http import HttpRequest
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 from django_object_actions import DjangoObjectActions, action
@@ -11,6 +12,8 @@ from utils.admins import (
     testcase_md5,
     upload_problem_info_process,
 )
+from utils.views import get_available_apps
+from utils.admins import get_newest_problems_log
 
 from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
@@ -83,6 +86,14 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     ]
     change_actions = ("update_problem_testcase", "update_problem_information")
 
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return queryset
+        
+        return queryset.filter(owner=request.user)
+
     @admin.display(description="更新說明")
     def update_illustrate(self, *args, **kwargs):
         return mark_safe(
@@ -91,13 +102,125 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                 再按下 ”更新測資“ 或者 ”更新題目資訊“ 即可將資料上傳至 domjudge。
             """
         )
+    
+    def handle_problem_testcase_data(self, problem_obj):
+        """
+        Handle the problem testcase data.
+
+        Args:
+            problem_obj (Problem): The problem object.
+
+        Returns:
+            dict: A dictionary containing the problem testcases.
+        """
+        problem_testcase_obj_all = problem_obj.int_out_data.all()
+
+        problems_dict = dict()
+        for testcase_obj in problem_testcase_obj_all:
+            problem_testcase_md5 = testcase_md5(
+                testcase_obj.input_content
+            ) + testcase_md5(testcase_obj.answer_content)
+
+            problem_testcase_info = {
+                "input": testcase_obj.input_content,
+                "out": testcase_obj.answer_content,
+            }
+
+            problem_testcase = ProblemTestCase(**problem_testcase_info)
+            problems_dict[problem_testcase_md5] = problem_testcase
+
+        return problems_dict
+    
+    def handle_testcases_difference(self, web_testcases_all_dict, problems_dict):
+        """
+        Handle the testcases difference.
+
+        Returns:
+            Tuple[set, set]: The difference between the testcases.
+        """
+        web_testcases_md5 = set(web_testcases_all_dict.keys())
+        problems_testcases_md5 = set(problems_dict.keys())
+
+        problems_testcases_difference = problems_testcases_md5.difference(
+            web_testcases_md5
+        )
+        web_testcases_difference = web_testcases_md5.difference(
+            problems_testcases_md5
+        )
+
+        return web_testcases_difference, problems_testcases_difference
+    
+    def handle_testcases_delete(self, web_testcases_difference, web_testcases_all_dict, problem_crawler):
+        """
+        Delete test cases from the problem crawler based on the given web_testcases_difference.
+
+        Args:
+            web_testcases_difference (list): List of MD5 hashes representing the test cases to be deleted.
+            web_testcases_all_dict (dict): Dictionary containing testcase MD5 hashes as keys and corresponding input/output test cases as values.
+            problem_crawler (ProblemCrawler): Object used to delete test cases.
+
+        Returns:
+            None
+        """
+        for web_md5 in web_testcases_difference:
+            web_testcase_id = web_testcases_all_dict[web_md5].id
+            problem_crawler.delete_testcase(id=web_testcase_id)
+
+    def handle_testcases_upload(self, problems_testcases_difference, problems_dict, problem_log_obj, problem_crawler):
+        """
+        Handles the upload of test cases for a problem.
+
+        Args:
+            problems_testcases_difference (list): List of problem MD5 hashes for which test cases need to be uploaded.
+            problems_dict (dict): Dictionary containing testcase MD5 hashes as keys and corresponding input/output test cases as values.
+            problem_log_obj (object): Object representing the problem log.
+            problem_crawler (object): Object used to update test cases.
+
+        Returns:
+            bool: True if the test cases are successfully uploaded, False otherwise.
+        """
+        for problem_md5 in problems_testcases_difference:
+            testcase_in, testcase_out = (
+                problems_dict[problem_md5].input,
+                problems_dict[problem_md5].out,
+            )
+            problem_testcase_info_data = {
+                "add_input": ("add.in", testcase_in),
+                "add_output": ("add.out", testcase_out),
+            }
+            result = problem_crawler.update_testcase(
+                form_data=problem_testcase_info_data,
+                id=problem_log_obj.web_problem_id,
+            )
+
+            if not result:
+                return False
+
+        return True
+
+    def handle_testcases_edit(self, web_testcases_difference, web_testcases_all_dict, problems_testcases_difference, problems_dict, problem_log_obj, problem_crawler):
+        """
+        Edit the test cases for a problem.
+
+        Args:
+            web_testcases_difference (list): List of MD5 hashes representing the test cases to be deleted.
+            web_testcases_all_dict (dict): Dictionary containing testcase MD5 hashes as keys and corresponding input/output test cases as values.
+            problems_testcases_difference (list): List of problem MD5 hashes for which test cases need to be uploaded.
+            problems_dict (dict): Dictionary containing testcase MD5 hashes as keys and corresponding input/output test cases as values.
+            problem_log_obj (object): Object representing the problem log.
+            problem_crawler (object): Object used to update test cases.
+
+        Returns:
+            bool: True if the test cases are edited successfully, False otherwise.
+        """
+        self.handle_testcases_delete(web_testcases_difference, web_testcases_all_dict, problem_crawler)
+        return self.handle_testcases_upload(problems_testcases_difference, problems_dict, problem_log_obj, problem_crawler)
+
 
     @action(label="更新測資", description="update inout")
     def update_problem_testcase(self, request, problem_obj):
-        problem_testcase_obj_all = problem_obj.int_out_data.all()
         problem_log_obj_all = problem_obj.problem_log.all()
 
-        is_success = None
         for problem_log_obj in problem_log_obj_all:
             server_client = problem_log_obj.server_client
 
@@ -106,51 +229,16 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                 problem_id=problem_log_obj.web_problem_id
             )
 
-            problems_dict = dict()
-            for testcase_obj in problem_testcase_obj_all:
-                problem_testcase_md5 = testcase_md5(
-                    testcase_obj.input_content
-                ) + testcase_md5(testcase_obj.answer_content)
+            problems_dict = self.handle_problem_testcase_data(problem_obj=problem_obj)
+            web_testcases_difference, problems_testcases_difference = self.handle_testcases_difference(web_testcases_all_dict=web_testcases_all_dict, problems_dict=problems_dict)
 
-                problem_testcase_info = {
-                    "input": testcase_obj.input_content,
-                    "out": testcase_obj.answer_content,
-                }
+            edit_result = self.handle_testcases_edit(web_testcases_difference=web_testcases_difference, web_testcases_all_dict=web_testcases_all_dict, problems_testcases_difference=problems_testcases_difference, problems_dict=problems_dict, problem_log_obj=problem_log_obj, problem_crawler=problem_crawler)
 
-                problem_testcase = ProblemTestCase(**problem_testcase_info)
-                problems_dict[problem_testcase_md5] = problem_testcase
 
-            web_testcases_md5 = set(web_testcases_all_dict.keys())
-            problems_testcases_md5 = set(problems_dict.keys())
-
-            problems_testcases_difference = problems_testcases_md5.difference(
-                web_testcases_md5
-            )
-            web_testcases_difference = web_testcases_md5.difference(
-                problems_testcases_md5
-            )
-
-            for web_md5 in web_testcases_difference:
-                web_testcase_id = web_testcases_all_dict[web_md5].id
-                problem_crawler.delete_testcase(id=web_testcase_id)
-
-            for problem_md5 in problems_testcases_difference:
-                testcase_in, testcase_out = (
-                    problems_dict[problem_md5].input,
-                    problems_dict[problem_md5].out,
-                )
-
-                problem_testcase_info_data = {
-                    "add_input": ("add.in", testcase_in),
-                    "add_output": ("add.out", testcase_out),
-                }
-                is_success = problem_crawler.update_testcase(
-                    form_data=problem_testcase_info_data,
-                    id=problem_log_obj.web_problem_id,
-                )
-
-        if is_success:
+        if edit_result:
             messages.success(request, "測資更新成功！！")
+        else:
+            messages.error(request, "測資更新錯誤！！")
 
     @action(label="更新題目資訊")
     def update_problem_information(self, request, obj):
@@ -164,9 +252,8 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         problem_files = {"problem[problemtextFile]": obj.description_file}
 
-        problem_log_obj_all = obj.problem_log.all()
-
-        for problem_log_obj in problem_log_obj_all:
+        newest_problem_log = get_newest_problems_log(obj=obj)
+        for problem_log_obj in newest_problem_log:
             server_client = problem_log_obj.server_client
             problem_crawler = create_problem_crawler(server_client)
 
@@ -179,12 +266,12 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             if is_success:
                 messages.success(
                     request,
-                    f"{problem_log_obj.server_client.name}({problem_log_obj.web_problem_contest}) 更新成功！！",
+                    f'{problem_log_obj.server_client.name} "{problem_log_obj.problem}" 更新成功！！',
                 )
             else:
                 messages.error(
                     request,
-                    f"{problem_log_obj.server_client.name}({problem_log_obj.web_problem_contest}) 更新錯誤！！",
+                    f'{problem_log_obj.server_client.name} "{problem_log_obj.problem}" 更新錯誤！！',
                 )
 
     def get_queryset(self, request):
@@ -235,8 +322,10 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         context = {
             "problem_info": problem_info,
-            "server_client_name": [obj.name for obj in server_objects],
+            "servers_client_name": [obj.name for obj in server_objects],
             "contest_name": contest_name,
+            "opts": queryset.model._meta,
+            "available_apps": get_available_apps(request),
         }
 
         return render(request, "upload_process.html", context)
