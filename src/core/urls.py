@@ -24,7 +24,7 @@ from app.domservers.views import (
     contest_problem_copy_view,
     contest_problem_shortname_create_view,
     contest_problem_shortname_edit_view,
-    contest_problem_upload_edit_view,
+    contest_select_problem_edit_view,
     contest_problem_upload_view,
 )
 from app.problems.views import (
@@ -70,7 +70,7 @@ urlpatterns = [
         name="contest_problem_create",
     ),
     path(
-        "contest/<id>/<cid>/edit/",
+        "contest/<server_id>/<contest_id>/<cid>/edit/",
         contest_information_edit_view,
         name="contest_information_edit",
     ),
@@ -80,9 +80,9 @@ urlpatterns = [
         name="contest_problem_shortname_edit",
     ),
     path(
-        "contest/<id>/<cid>/upload/edit/",
-        contest_problem_upload_edit_view,
-        name="contest_problem_upload_edit",
+        "contest/<id>/<cid>/select/problem/edit/",
+        contest_select_problem_edit_view,
+        name="contest_select_problem_edit",
     ),
     path(
         "contest/<id>/<cid>/copy/",

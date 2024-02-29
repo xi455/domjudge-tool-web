@@ -5,12 +5,13 @@ from datetime import datetime
 
 from django.contrib import messages
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
 from app.users.models import User
+from app.problems.models import ProblemServerLog
 from app.domservers import exceptions as domserver_exceptions
-from app.domservers.forms import DomServerContestCreatForm
+from app.domservers.forms import DomServerContestForm
 from app.domservers.models import DomServerClient, DomServerContest
 
 from utils import exceptions as utils_exceptions
@@ -19,7 +20,7 @@ from utils.views import (
     contest_problem_shortname_process,
     get_available_apps,
 )
-from utils.domserver.views import create_contest_record
+from utils.domserver.views import create_contest_record, handle_problem_log_state
 
 # Create your views here.
 
@@ -47,7 +48,7 @@ def contest_create_view(request):
     available_apps = get_available_apps(request)
 
     if request.method == "POST":
-        form = DomServerContestCreatForm(request.POST)
+        form = DomServerContestForm(request.POST)
         server_client_id = request.POST.get("server_client_id")
 
         if form.is_valid():
@@ -95,7 +96,7 @@ def contest_create_view(request):
             "deactivate_time": "2024-01-01 22:00:00 Asia/Taipei",  # 停用時間必須大於解凍時間
         }
 
-        form = DomServerContestCreatForm(initial=initial_data)
+        form = DomServerContestForm(initial=initial_data)
         server_client_id = request.GET.get("server_client_id")
         obj = DomServerClient.objects.get(id=server_client_id)
 
@@ -180,28 +181,23 @@ def contest_problem_shortname_create_view(request):
 
 
 @require_http_methods(["GET", "POST"])
-def contest_information_edit_view(request, id, cid):
-    client_obj = DomServerClient.objects.get(id=id)
+def contest_information_edit_view(request, server_id, contest_id, cid):
+    client_obj = DomServerClient.objects.get(id=server_id)
     problem_crawler = create_problem_crawler(client_obj)
     available_apps = get_available_apps(request)
-
+    
     if request.method == "POST":
-        form = DomServerContestCreatForm(request.POST)
+        contest_obj = get_object_or_404(DomServerContest, id=contest_id)
+        form = DomServerContestForm(request.POST, instance=contest_obj)
 
         if form.is_valid():
             contest_update_data = form.cleaned_data
 
-            for key, value in contest_update_data.items():
-                if isinstance(value, bool):
-                    if value:
-                        contest_update_data[key] = "1"
-                    else:
-                        contest_update_data[key] = "0"
-
             # get the all problem
             problem_data_dict = problem_crawler.get_problems()
+            contest_update_data = problem_crawler.contest_format_process(contest_data=contest_update_data)
             contest_update_data_json = json.dumps(contest_update_data)
-
+            
             # get the existing problem
             existing_problem_informtion_dict = (
                 problem_crawler.get_contest_or_problem_information(
@@ -213,11 +209,19 @@ def contest_information_edit_view(request, id, cid):
                 for key, value in existing_problem_informtion_dict.items()
                 if "[problem]" in key
             ]
+           
+            form.save()
+            contest_update_data.update(existing_problem_informtion_dict)
+            contest_update_data.update({"contest[save]": ""})
+            result = problem_crawler.contest_problem_upload(contest_id=cid, problem_data=contest_update_data)
+            
+            if result:
+                messages.success(request, "考區編輯成功！！")
 
             context = {
                 "server_client_id": client_obj.id,
                 "server_client_name": client_obj.name,
-                "contest_id": cid,
+                "cid": cid,
                 "contest_update_data_json": contest_update_data_json,
                 "existing_problem_id_list": existing_problem_id_list,
                 "problem_data_dict": problem_data_dict,
@@ -226,51 +230,15 @@ def contest_information_edit_view(request, id, cid):
             }
             return render(request, "contest_edit_selected_problem.html", context)
 
+    contest_obj = get_object_or_404(DomServerContest, id=contest_id)
     if request.method == "GET":
-
-        # Get contest information
-        contest_info_response = problem_crawler.get_contest_or_problem_information(
-            contest_id=cid, need_content="contest"
-        )
-
-        form = DomServerContestCreatForm()
-
-        initial_data = {
-            "short_name": contest_info_response["contest[shortname]"],
-            "name": contest_info_response["contest[name]"],
-            "activate_time": contest_info_response["contest[activatetimeString]"],
-            "start_time": contest_info_response["contest[starttimeString]"],
-            "scoreboard_freeze_length": contest_info_response[
-                "contest[freezetimeString]"
-            ],
-            "end_time": contest_info_response["contest[endtimeString]"],
-            "scoreboard_unfreeze_time": contest_info_response[
-                "contest[unfreezetimeString]"
-            ],
-            "deactivate_time": contest_info_response["contest[deactivatetimeString]"],
-            "start_time_enabled": True
-            if contest_info_response["contest[starttimeEnabled]"] == "1"
-            else False,
-            "process_balloons": True
-            if contest_info_response["contest[processBalloons]"] == "1"
-            else False,
-            "contest_visible_on_public_scoreboard": True
-            if contest_info_response["contest[public]"] == "1"
-            else False,
-            "open_to_all_teams": True
-            if contest_info_response["contest[openToAllTeams]"] == "1"
-            else False,
-            "enabled": True
-            if contest_info_response["contest[enabled]"] == "1"
-            else False,
-        }
-
-        form = DomServerContestCreatForm(initial=initial_data)
+        form = DomServerContestForm(instance=contest_obj)
 
     context = {
         "server_client_id": client_obj.id,
         "server_client_name": client_obj.name,
-        "contest_id": cid,
+        "contest_id": contest_id,
+        "cid": cid,
         "form": form,
         "opts": client_obj._meta,
         "available_apps": available_apps,
@@ -289,6 +257,7 @@ def contest_problem_shortname_edit_view(request, id, cid):
     # Get the latest contest area information
     contest_info = contest_problem_shortname_process(form_data=form_data)
 
+    handle_problem_log_state(request, cid, client_obj, "移除", problem_crawler)
     # Delete the problem information in the old contest area
     old_problem_info_remove_process(problem_crawler=problem_crawler, cid=cid)
 
@@ -298,6 +267,7 @@ def contest_problem_shortname_edit_view(request, id, cid):
     )
 
     if upload_response:
+        handle_problem_log_state(request, cid, client_obj, "新增", problem_crawler)
         messages.success(request, "考區編輯成功！！")
     else:
         messages.error(request, "考區編輯失敗！！")
@@ -395,21 +365,16 @@ def contest_problem_information_update_process(
 
 
 @require_http_methods(["POST"])
-def contest_problem_upload_edit_view(request, id, cid):
+def contest_select_problem_edit_view(request, id, cid):
 
     available_apps = get_available_apps(request)
 
     # Extract contest data and selected problems from the request
-    contest_data = json.loads(request.POST.get("contestDataJson"))
+    contest_information = json.loads(request.POST.get("contestDataJson"))
     selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
 
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
-
-    # Get contest information format
-    contest_information = problem_crawler.contest_format_process(
-        contest_data=contest_data
-    )
 
     # Get problem information format
     problem_information = problem_crawler.problem_format_process(
@@ -436,7 +401,7 @@ def contest_problem_upload_edit_view(request, id, cid):
     create_data_json = json.dumps(create_information)
 
     context = {
-        "contest_id": cid,
+        "cid": cid,
         "server_client_id": client_obj.id,
         "server_client_name": client_obj.name,
         "selected_problem_dict": selected_problem,

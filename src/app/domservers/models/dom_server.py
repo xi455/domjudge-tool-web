@@ -96,27 +96,27 @@ class DomServerContest(BaseModel):
         max_length=255,
         # editable=False,
     )
+    name = models.CharField("考區名稱", max_length=255)
     short_name = models.CharField(
         "考區簡稱",
         max_length=255,
     )
     start_time = models.CharField("開始時間", max_length=255)
-    name = models.CharField("考區名稱", max_length=255)
+    end_time = models.CharField("記分牌結束時間", max_length=255)
     activate_time = models.CharField("啟動時間", max_length=255)
-    start_time_enabled = models.BooleanField("是否啟用開始時間", default=False)
     scoreboard_freeze_length = models.CharField(
         "凍結時間", max_length=255, blank=True, null=True
     )
-    end_time = models.CharField("記分牌結束時間", max_length=255)
     scoreboard_unfreeze_time = models.CharField(
         "記分牌解凍時間", max_length=255, blank=True, null=True
     )
     deactivate_time = models.CharField("停用時間", max_length=255, blank=True, null=True)
+    start_time_enabled = models.BooleanField("是否啟用開始時間", default=False)
     process_balloons = models.BooleanField("是否啟用處理氣球", default=False)
+    open_to_all_teams = models.BooleanField("是否向所有團隊開放", default=False)
     contest_visible_on_public_scoreboard = models.BooleanField(
         "是否比賽在公共計分板上可見", default=False
     )
-    open_to_all_teams = models.BooleanField("是否向所有團隊開放", default=False)
     enabled = models.BooleanField("是否啟用", default=False)
 
     def __str__(self):

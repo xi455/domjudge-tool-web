@@ -36,7 +36,7 @@ class DomServerAccountForm(forms.ModelForm):
         )
 
 
-class DomServerContestCreatForm(forms.ModelForm):
+class DomServerContestForm(forms.ModelForm):
     parsed_start = None
     parsed_end = None
 
@@ -80,12 +80,15 @@ class DomServerContestCreatForm(forms.ModelForm):
     )
     scoreboard_freeze_length = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False,
     )
     scoreboard_unfreeze_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False,
     )
     deactivate_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False,
     )
     start_time_enabled = forms.BooleanField(
         widget=forms.CheckboxInput(
@@ -307,21 +310,6 @@ class DomServerContestCreatForm(forms.ModelForm):
 
     class Meta:
         model = DomServerContest
-        fields = (
-            "name",
-            "short_name",
-            "start_time",
-            "end_time",
-            "activate_time",
-            "scoreboard_freeze_length",
-            "scoreboard_unfreeze_time",
-            "deactivate_time",
-            "start_time_enabled",
-            "process_balloons",
-            "open_to_all_teams",
-            "contest_visible_on_public_scoreboard",
-            "enabled",
-        )
 
         exclude = (
             "owner",
