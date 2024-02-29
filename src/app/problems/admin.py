@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
-from django.shortcuts import render
 from django.http import HttpRequest
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 from django_object_actions import DjangoObjectActions, action
@@ -9,11 +9,11 @@ from pydantic import BaseModel
 from app.domservers.models import DomServerClient
 from utils.admins import (
     create_problem_crawler,
+    get_newest_problems_log,
     testcase_md5,
     upload_problem_info_process,
 )
 from utils.views import get_available_apps
-from utils.admins import get_newest_problems_log
 
 from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
@@ -36,7 +36,7 @@ class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
         "problem",
         "server_client",
         "web_problem_id",
-        "web_problem_contest_cid",
+        "contest",
         "web_problem_state",
     )
 
@@ -91,7 +91,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         if request.user.is_superuser:
             return queryset
-        
+
         return queryset.filter(owner=request.user)
 
     @admin.display(description="更新說明")
@@ -102,7 +102,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                 再按下 ”更新測資“ 或者 ”更新題目資訊“ 即可將資料上傳至 domjudge。
             """
         )
-    
+
     def handle_problem_testcase_data(self, problem_obj):
         """
         Handle the problem testcase data.
@@ -130,7 +130,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             problems_dict[problem_testcase_md5] = problem_testcase
 
         return problems_dict
-    
+
     def handle_testcases_difference(self, web_testcases_all_dict, problems_dict):
         """
         Handle the testcases difference.
@@ -144,13 +144,13 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         problems_testcases_difference = problems_testcases_md5.difference(
             web_testcases_md5
         )
-        web_testcases_difference = web_testcases_md5.difference(
-            problems_testcases_md5
-        )
+        web_testcases_difference = web_testcases_md5.difference(problems_testcases_md5)
 
         return web_testcases_difference, problems_testcases_difference
-    
-    def handle_testcases_delete(self, web_testcases_difference, web_testcases_all_dict, problem_crawler):
+
+    def handle_testcases_delete(
+        self, web_testcases_difference, web_testcases_all_dict, problem_crawler
+    ):
         """
         Delete test cases from the problem crawler based on the given web_testcases_difference.
 
@@ -166,7 +166,13 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             web_testcase_id = web_testcases_all_dict[web_md5].id
             problem_crawler.delete_testcase(id=web_testcase_id)
 
-    def handle_testcases_upload(self, problems_testcases_difference, problems_dict, problem_log_obj, problem_crawler):
+    def handle_testcases_upload(
+        self,
+        problems_testcases_difference,
+        problems_dict,
+        problem_log_obj,
+        problem_crawler,
+    ):
         """
         Handles the upload of test cases for a problem.
 
@@ -198,7 +204,15 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         return True
 
-    def handle_testcases_edit(self, web_testcases_difference, web_testcases_all_dict, problems_testcases_difference, problems_dict, problem_log_obj, problem_crawler):
+    def handle_testcases_edit(
+        self,
+        web_testcases_difference,
+        web_testcases_all_dict,
+        problems_testcases_difference,
+        problems_dict,
+        problem_log_obj,
+        problem_crawler,
+    ):
         """
         Edit the test cases for a problem.
 
@@ -213,9 +227,15 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         Returns:
             bool: True if the test cases are edited successfully, False otherwise.
         """
-        self.handle_testcases_delete(web_testcases_difference, web_testcases_all_dict, problem_crawler)
-        return self.handle_testcases_upload(problems_testcases_difference, problems_dict, problem_log_obj, problem_crawler)
-
+        self.handle_testcases_delete(
+            web_testcases_difference, web_testcases_all_dict, problem_crawler
+        )
+        return self.handle_testcases_upload(
+            problems_testcases_difference,
+            problems_dict,
+            problem_log_obj,
+            problem_crawler,
+        )
 
     @action(label="更新測資", description="update inout")
     def update_problem_testcase(self, request, problem_obj):
@@ -230,10 +250,22 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             )
 
             problems_dict = self.handle_problem_testcase_data(problem_obj=problem_obj)
-            web_testcases_difference, problems_testcases_difference = self.handle_testcases_difference(web_testcases_all_dict=web_testcases_all_dict, problems_dict=problems_dict)
+            (
+                web_testcases_difference,
+                problems_testcases_difference,
+            ) = self.handle_testcases_difference(
+                web_testcases_all_dict=web_testcases_all_dict,
+                problems_dict=problems_dict,
+            )
 
-            edit_result = self.handle_testcases_edit(web_testcases_difference=web_testcases_difference, web_testcases_all_dict=web_testcases_all_dict, problems_testcases_difference=problems_testcases_difference, problems_dict=problems_dict, problem_log_obj=problem_log_obj, problem_crawler=problem_crawler)
-
+            edit_result = self.handle_testcases_edit(
+                web_testcases_difference=web_testcases_difference,
+                web_testcases_all_dict=web_testcases_all_dict,
+                problems_testcases_difference=problems_testcases_difference,
+                problems_dict=problems_dict,
+                problem_log_obj=problem_log_obj,
+                problem_crawler=problem_crawler,
+            )
 
         if edit_result:
             messages.success(request, "測資更新成功！！")

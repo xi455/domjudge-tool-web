@@ -40,13 +40,13 @@ delete-confirmation{%endblock %}
                             {% for object in page_obj %}
                                 <tr>
                                     <th scope="row">{{ forloop.counter }}</th>
-                                    <td>{{ object.shortname }}</td>
+                                    <td>{{ object.short_name }}</td>
                                     <td>{{ object.name }}</td>
-                                    <td>{{ object.problems }}</td>
-                                    {% if object.public == "yes" %}
-                                        <td>已開放</td>
+                                    <td>{{ object.contest_log.all.count }}</td>
+                                    {% if object.enabled == "yes" %}
+                                        <td>已啟用</td>
                                     {% else %}
-                                        <td>未開放</td>
+                                        <td>未啟用</td>
                                     {% endif %}
                                     <td>
                                         <a href="{% url 'contest_information_copy' server_client_id object.cid %}"

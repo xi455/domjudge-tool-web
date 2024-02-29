@@ -3,6 +3,7 @@ import hashlib
 from django.core.paginator import Paginator
 
 # from app.problems.crawler import ProblemCrawler
+from app.domservers.models import DomServerContest
 from utils.crawler import ProblemCrawler
 
 
@@ -66,16 +67,14 @@ def get_page_obj(request, obj_list):
     return page_obj
 
 
-from app.domservers.models import ContestRecord
 def get_contest_all_and_page_obj(request, problem_crawler):
     # 獲取所有比賽信息
 
     if request.user.is_superuser:
-        contest_info_list = [obj for obj in ContestRecord.objects.all()]
+        contest_info_list = [obj for obj in DomServerContest.objects.all()]
     else:
-        contest_info_list = ContestRecord.objects.filter(owner=request.user)
+        contest_info_list = DomServerContest.objects.filter(owner=request.user)
 
-    print("contest_info_list:", contest_info_list)
     # contest_info_list = get_contest_all(problem_crawler)
     # print("contest_info_list:", contest_info_list)
     # 使用比賽信息列表來獲取分頁對象
@@ -127,7 +126,7 @@ def get_newest_problems_log(obj):
     problem_logs_list = list()
 
     for obj in newest_problem_log:
-        if obj.web_problem_contest_cid not in problem_logs_list:
+        if obj.contest not in problem_logs_list:
             problem_logs_list.append(obj)
 
     return newest_problem_log

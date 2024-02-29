@@ -6,7 +6,7 @@ from django import forms
 from django.core.validators import RegexValidator
 from pytz import UnknownTimeZoneError, timezone
 
-from app.domservers.models import DomServerClient
+from app.domservers.models import DomServerClient, DomServerContest
 from utils.forms import validate_country_format
 
 
@@ -36,7 +36,7 @@ class DomServerAccountForm(forms.ModelForm):
         )
 
 
-class DomServerContestCreatForm(forms.Form):
+class DomServerContestCreatForm(forms.ModelForm):
     parsed_start = None
     parsed_end = None
 
@@ -49,7 +49,7 @@ class DomServerContestCreatForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 在這裡設置 your_boolean_field 的初始值
+        # 在這裡設置 boolean_field 的初始值
         self.fields["start_time_enabled"].initial = False
         self.fields["process_balloons"].initial = False
         self.fields["open_to_all_teams"].initial = False
@@ -58,11 +58,9 @@ class DomServerContestCreatForm(forms.Form):
 
     name = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=True,
     )
     short_name = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=True,
         validators=[
             RegexValidator(
                 regex="^[a-zA-Z0-9_-]+$",
@@ -73,27 +71,21 @@ class DomServerContestCreatForm(forms.Form):
     )
     start_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=True,
     )
     end_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=True,
     )
     activate_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=True,
     )
     scoreboard_freeze_length = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=False,
     )
     scoreboard_unfreeze_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=False,
     )
     deactivate_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        required=False,
     )
     start_time_enabled = forms.BooleanField(
         widget=forms.CheckboxInput(
@@ -167,7 +159,7 @@ class DomServerContestCreatForm(forms.Form):
             )
 
         self.parsed_activate_time = dt
-        if hasattr(self, "parsed_start"):
+        if hasattr(self, "parsed_start"):           
             if self.parsed_activate_time > self.parsed_start:
                 raise forms.ValidationError(
                     ("啟動時間必須小於開始時間"),
@@ -311,4 +303,28 @@ class DomServerContestCreatForm(forms.Form):
         raise forms.ValidationError(
             ("記分牌解凍時間欄位疑似有誤請再次檢查"),
             code="invalid",
+        )
+
+    class Meta:
+        model = DomServerContest
+        fields = (
+            "name",
+            "short_name",
+            "start_time",
+            "end_time",
+            "activate_time",
+            "scoreboard_freeze_length",
+            "scoreboard_unfreeze_time",
+            "deactivate_time",
+            "start_time_enabled",
+            "process_balloons",
+            "open_to_all_teams",
+            "contest_visible_on_public_scoreboard",
+            "enabled",
+        )
+
+        exclude = (
+            "owner",
+            "server_client",
+            "cid",
         )

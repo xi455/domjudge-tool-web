@@ -1,9 +1,18 @@
 from datetime import datetime
-
 from pytz import UnknownTimeZoneError, timezone
 
 
 def validate_country_format(time_string: str):
+    """
+    Validates the format of a time string and extracts the country name.
+
+    Args:
+        time_string (str): The time string to be validated.
+
+    Returns:
+        tuple: A tuple containing a boolean value indicating whether the format is valid,
+               and the result time if the format is valid, or None otherwise.
+    """
     try:
         start_time_list = str(time_string).split(" ")
 

@@ -8,18 +8,38 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
+from app.users.models import User
 from app.domservers import exceptions as domserver_exceptions
 from app.domservers.forms import DomServerContestCreatForm
-from app.domservers.models import DomServerClient
+from app.domservers.models import DomServerClient, DomServerContest
+
 from utils import exceptions as utils_exceptions
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 from utils.views import (
     contest_problem_shortname_process,
-    create_contest_record,
     get_available_apps,
 )
+from utils.domserver.views import create_contest_record
 
 # Create your views here.
+
+def contest_format_and_upload(problem_crawler, creat_contest_data):
+    """
+    Formats and uploads a contest using the provided problem_crawler and create_contest_data.
+
+    Args:
+        problem_crawler: The problem crawler object used to format and upload the contest.
+        create_contest_data: The data used to create the contest.
+
+    Returns:
+        The result of the contest and problem creation process.
+    """
+    contest_information = problem_crawler.contest_format_process(
+        contest_data=creat_contest_data
+    )
+    contest_information.update({"contest[save]": ""})
+
+    return problem_crawler.contest_and_problem_create(create_contest_information=contest_information)
 
 
 @require_http_methods(["GET", "POST"])
@@ -40,6 +60,15 @@ def contest_create_view(request):
 
             if form.cleaned_data["short_name"] in contest_all_name:
                 messages.error(request, "考區簡稱重複！！請重新輸入")
+                return redirect(f"/contest/create/?server_client_id={server_client_id}")
+            
+            create_response = contest_format_and_upload(problem_crawler, creat_contest_data)
+            
+            if create_response:
+                create_contest_record(request, form, client_obj, problem_crawler)
+                messages.success(request, "考區創建成功！！")
+            else:
+                messages.error(request, "考區創建失敗！！")
                 return redirect(f"/contest/create/?server_client_id={server_client_id}")
 
             contest_data_json = json.dumps(creat_contest_data)
@@ -89,16 +118,15 @@ def contest_problem_upload_view(request, id):
 
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
+    contest_cid = DomServerContest.objects.get(short_name=create_contest_info.get("contest[shortname]")).cid
 
-    create_response = problem_crawler.contest_and_problem_create(
-        create_contest_information=create_contest_info
-    )
+    upload_response = problem_crawler.contest_problem_upload(contest_id=contest_cid, problem_data=create_contest_info)
 
-    if create_response:
-        create_contest_record(request=request, problem_crawler=problem_crawler)
-        messages.success(request, "考區創建成功！！")
+    if upload_response:
+        # create_contest_record(request=request, problem_crawler=problem_crawler)
+        messages.success(request, "題目上傳成功！！")
     else:
-        messages.error(request, "考區創建失敗！！")
+        messages.error(request, "題目上傳失敗！！")
 
     # get all contest
     page_obj = get_contest_all_and_page_obj(

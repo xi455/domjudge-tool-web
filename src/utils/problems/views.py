@@ -11,7 +11,7 @@ def handle_problems_upload_info(problem_data):
     Args:
         problem_data (dict): A dictionary containing the following keys:
             - owner_obj: The owner object.
-            - contest_id: The contest ID.
+            - contest_obj: The contest object.
             - server_client: The server client.
             - problem_id_list: A list of problem IDs.
 
@@ -21,7 +21,7 @@ def handle_problems_upload_info(problem_data):
             - problems_obj_dict (dict): A dictionary mapping problem names to their corresponding objects.
     """
     owner_obj = problem_data.get("owner_obj")
-    contest_id = problem_data.get("contest_id")
+    contest_obj = problem_data.get("contest_obj")
     server_client = problem_data.get("server_client")
     problem_id_list = problem_data.get("problem_id_list")
 
@@ -44,7 +44,7 @@ def handle_problems_upload_info(problem_data):
             "owner": owner_obj,
             "problem": problem_obj,
             "server_client": server_client,
-            "web_problem_contest_cid": contest_id,
+            "contest": contest_obj,
             "web_problem_state": "新增",
         }
 
@@ -68,7 +68,7 @@ def create_problem_log(problems_obj_data_dict):
             problem=value.get("problem"),
             server_client=value.get("server_client"),
             web_problem_id=value.get("web_problem_id"),
-            web_problem_contest_cid=value.get("web_problem_contest_cid"),
+            contest=value.get("contest"),
             web_problem_state=value.get("web_problem_state"),
         )
         objs_list.append(create_problem_log_obj)

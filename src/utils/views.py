@@ -3,7 +3,6 @@ import json
 from django.contrib import admin
 
 from app.domservers import exceptions as domserver_exceptions
-from app.domservers.models import ContestRecord
 from app.users.models import User
 from utils.exceptions import CrawlerHandleContestShortNameException
 
@@ -20,7 +19,7 @@ def get_available_apps(request):
     """
     site = admin.site
     available_apps = site.each_context(request).get("available_apps")
-    return available_apps # 獲取 sidebar 所有應用
+    return available_apps  # 獲取 sidebar 所有應用
 
 
 def contest_problem_shortname_process(form_data):
@@ -57,45 +56,47 @@ def contest_problem_shortname_process(form_data):
         raise CrawlerHandleContestShortNameException("Process Contest Shortname Failed")
 
 
-def create_contest_record(
-    request, problem_crawler, contest_shortname=None, server_client_id=None
-):
-    """
-    Create a contest record.
 
-    Args:
-        request (HttpRequest): The HTTP request object.
-        problem_crawler (ProblemCrawler): The problem crawler object.
-        contest_shortname (str, optional): The shortname of the contest. Defaults to None.
-        server_client_id (str, optional): The server client ID. Defaults to None.
 
-    Raises:
-        ContestRecordException: If creating the contest record fails.
+# def create_contest_record(
+#     request, problem_crawler, contest_shortname=None, server_client_id=None
+# ):
+#     """
+#     Create a contest record.
 
-    Returns:
-        None
-    """
-    try:
-        if not contest_shortname:
-            contest_shortname = contest_problem_shortname_process(
-                form_data=request.POST
-            ).get("contest[shortname]")
+#     Args:
+#         request (HttpRequest): The HTTP request object.
+#         problem_crawler (ProblemCrawler): The problem crawler object.
+#         contest_shortname (str, optional): The shortname of the contest. Defaults to None.
+#         server_client_id (str, optional): The server client ID. Defaults to None.
 
-        if not server_client_id:
-            server_client_id = request.POST.get("server_client_id")
+#     Raises:
+#         ContestRecordException: If creating the contest record fails.
 
-        cid = problem_crawler.get_contest_name_cid(contest_shortname=contest_shortname)
-        owner = User.objects.get(username=request.user)
+#     Returns:
+#         None
+#     """
+#     try:
+#         if not contest_shortname:
+#             contest_shortname = contest_problem_shortname_process(
+#                 form_data=request.POST
+#             ).get("contest[shortname]")
 
-        contest_record = ContestRecord.objects.create(
-            owner=owner,
-            server_id=server_client_id,
-            domjudge_contest_id=cid,
-        )
+#         if not server_client_id:
+#             server_client_id = request.POST.get("server_client_id")
 
-        contest_record.save()
+#         cid = problem_crawler.get_contest_name_cid(contest_shortname=contest_shortname)
+#         owner = User.objects.get(username=request.user)
 
-    except Exception:
-        raise domserver_exceptions.ContestRecordException(
-            "Create Contest Record Failed"
-        )
+#         contest_record = ContestRecord.objects.create(
+#             owner=owner,
+#             server_id=server_client_id,
+#             domjudge_contest_id=cid,
+#         )
+
+#         contest_record.save()
+
+#     except Exception:
+#         raise domserver_exceptions.ContestRecordException(
+#             "Create Contest Record Failed"
+#         )

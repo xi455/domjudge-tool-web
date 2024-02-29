@@ -2,7 +2,7 @@ from django.core.files.storage import default_storage
 from django.core.validators import FileExtensionValidator, ValidationError
 from django.db import models
 
-from app.domservers.models import DomServerClient
+from app.domservers.models import DomServerClient, DomServerContest
 from utils.models import BaseModel
 
 
@@ -110,9 +110,14 @@ class ProblemServerLog(models.Model):
         verbose_name="伺服器紀錄",
         # editable=False,
     )
-    # web_problem_shortname = models.CharField("網站題目代號", max_length=68)
+    contest = models.ForeignKey(
+        DomServerContest,
+        on_delete=models.CASCADE,
+        related_name="contest_log",
+        verbose_name="考區紀錄",
+        # editable=False,
+    )
     web_problem_id = models.CharField("網站題目ID", max_length=68)
-    web_problem_contest_cid = models.CharField("網站競賽區CID", max_length=68)
 
     class state(models.TextChoices):
         FIRST_STATE = "新增", "新增"

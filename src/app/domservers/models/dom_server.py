@@ -75,27 +75,53 @@ class DomServerClient(BaseModel):
         verbose_name_plural = "Dom Server 連線資訊"
 
 
-class ContestRecord(BaseModel):
+class DomServerContest(BaseModel):
     owner = models.ForeignKey(
         "users.User",
         on_delete=models.CASCADE,
-        related_name="contest_records",
+        related_name="contest_owner",
         verbose_name="使用者",
+        default=1,
     )
-    server_id = models.TextField(
-        verbose_name="伺服器ID",
-        help_text="請輸入伺服器ID",
-        editable=False,
+    server_client = models.ForeignKey(
+        DomServerClient,
+        on_delete=models.CASCADE,
+        related_name="contest_server_client",
+        verbose_name="伺服器紀錄",
+        default=1,
+        # editable=False,
     )
-    cid = models.TextField(
-        verbose_name="Domjudge考區ID",
-        help_text="請輸入Domjudge考區ID",
-        editable=False,
+    cid = models.CharField(
+        "考區ID",
+        max_length=255,
+        # editable=False,
     )
+    short_name = models.CharField(
+        "考區簡稱",
+        max_length=255,
+    )
+    start_time = models.CharField("開始時間", max_length=255)
+    name = models.CharField("考區名稱", max_length=255)
+    activate_time = models.CharField("啟動時間", max_length=255)
+    start_time_enabled = models.BooleanField("是否啟用開始時間", default=False)
+    scoreboard_freeze_length = models.CharField(
+        "凍結時間", max_length=255, blank=True, null=True
+    )
+    end_time = models.CharField("記分牌結束時間", max_length=255)
+    scoreboard_unfreeze_time = models.CharField(
+        "記分牌解凍時間", max_length=255, blank=True, null=True
+    )
+    deactivate_time = models.CharField("停用時間", max_length=255, blank=True, null=True)
+    process_balloons = models.BooleanField("是否啟用處理氣球", default=False)
+    contest_visible_on_public_scoreboard = models.BooleanField(
+        "是否比賽在公共計分板上可見", default=False
+    )
+    open_to_all_teams = models.BooleanField("是否向所有團隊開放", default=False)
+    enabled = models.BooleanField("是否啟用", default=False)
 
     def __str__(self):
-        return f"Contest Record - User: {self.owner}, Domjudge Contest Cid: {self.cid}"
+        return f"{self.short_name}"
 
     class Meta:
-        verbose_name = "Contest 紀錄"
-        verbose_name_plural = "Contest 紀錄"
+        verbose_name = "DomServer Contest 考場"
+        verbose_name_plural = "DomServer Contest 考場"

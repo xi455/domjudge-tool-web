@@ -1,4 +1,5 @@
 from typing import Any
+
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
@@ -6,16 +7,18 @@ from django.shortcuts import render
 from django_object_actions import DjangoObjectActions, action
 
 from app.domservers.forms import DomServerAccountForm
-from app.domservers.models import ContestRecord, DomServerClient
+from app.domservers.models import DomServerClient, DomServerContest
 from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 from utils.views import get_available_apps
 
 # Register your models here.
 
 
-@admin.register(ContestRecord)
-class ContestRecordAdmin(DjangoObjectActions, admin.ModelAdmin):
-    list_display = [field.name for field in ContestRecord._meta.get_fields()]
+@admin.register(DomServerContest)
+class DomServerContestAdmin(DjangoObjectActions, admin.ModelAdmin):
+    list_display = [
+        "cid",
+    ]
 
 
 @admin.register(DomServerClient)
@@ -45,13 +48,13 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
             form.instance.mask_password = password_field
 
         return super().save_form(request, form, change)
-    
+
     def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:
         queryset = super().get_queryset(request)
 
         if request.user.is_superuser:
             return queryset
-        
+
         return queryset.filter(owner=request.user)
 
     @action(label="取得考區資訊")
