@@ -33,6 +33,7 @@ class ProblemInOutInline(admin.TabularInline):
 @admin.register(ProblemServerLog)
 class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_display = (
+        "owner",
         "problem",
         "server_client",
         "web_problem_id",
@@ -335,9 +336,12 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         Returns:
             Return the selected problem to the upload_process.html page.
         """
-        server_objects = DomServerClient.objects.filter(owner=request.user).order_by(
-            "id"
-        )
+        if request.user.is_superuser:
+            server_objects = DomServerClient.objects.all().order_by("id")
+        else:
+            server_objects = DomServerClient.objects.filter(owner=request.user).order_by(
+                "id"
+            )
 
         if not server_objects:
             return messages.error(request, "請先新增伺服器資訊！！")

@@ -13,7 +13,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-{% include 'include/_breadcrumbs.html' %}
+{% include 'domservers_include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
@@ -42,8 +42,8 @@ delete-confirmation{%endblock %}
                             {% for data in selected_problem_dict %}
                             <div class="col-12 col-sm-9">
                                 <div class="mb-3">
-                                <label for="{{data.id}}" class="form-label">{{data.name}}</label>
-                                <input type="text" class="form-control" id="{{data.id}}" name="{{data.name}}" aria-describedby="{{data.name}}lHelp" placeholder="settings shortname">                                
+                                <label for="{{data.id}}:{{data.local_id}}" class="form-label">{{data.name}}</label>
+                                <input type="text" class="form-control" id="{{data.id}}:{{data.local_id}}" name="{{data.name}}" aria-describedby="{{data.name}}lHelp" placeholder="settings shortname">                                
                                 </div>
                             </div>
                             {% endfor %}
@@ -74,8 +74,10 @@ delete-confirmation{%endblock %}
             // 獲取所有選中的复選框的值
             let inputs = document.querySelectorAll('input[class="form-control"]');
             let inputValues = Array.from(inputs).map(function (input) {
+                let ids = input.id.split(":");
                 return {
-                    id: input.id,
+                    id: ids[0],
+                    local_id: ids[1],
                     name: input.name,
                     shortname: input.value ? input.value : input.name,
                 };

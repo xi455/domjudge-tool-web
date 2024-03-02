@@ -6,8 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 
-from app.domservers.models.dom_server import DomServerClient
-from app.domservers.models.dom_server import DomServerContest
+from app.domservers.models.dom_server import DomServerClient, DomServerContest
 from app.users.models import User
 from utils.admins import create_problem_crawler, upload_problem_info_process
 from utils.problems.views import create_problem_log, handle_problems_upload_info
@@ -34,7 +33,9 @@ def problem_upload_view(request):
 
     owner_obj = get_object_or_404(User, username=request.user)
     server_client = get_object_or_404(DomServerClient, name=domserver_name)
-    contest_obj = DomServerContest.objects.filter(server_client=server_client, cid=contest_id).first()
+    contest_obj = DomServerContest.objects.filter(
+        server_client=server_client, cid=contest_id
+    ).first()
     problem_crawler = create_problem_crawler(server_client)
 
     problem_data = {

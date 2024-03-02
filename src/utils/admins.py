@@ -60,6 +60,10 @@ def get_contest_all(problem_crawler):
 
 
 def get_page_obj(request, obj_list):
+    for obj in obj_list:
+        test = obj.contest_log.filter(web_problem_state="新增")
+        obj.filtered_contest_log = test
+
     paginator = Paginator(obj_list, 8)
     page = request.GET.get("page")
     page_obj = paginator.get_page(page)
@@ -67,16 +71,18 @@ def get_page_obj(request, obj_list):
     return page_obj
 
 
-def get_contest_all_and_page_obj(request, problem_crawler):
+def get_contest_all_and_page_obj(request, client_obj):
     # 獲取所有比賽信息
 
     if request.user.is_superuser:
-        contest_info_list = [obj for obj in DomServerContest.objects.all()]
+        contest_info_list = [
+            obj for obj in DomServerContest.objects.filter(server_client=client_obj)
+        ]
     else:
-        contest_info_list = DomServerContest.objects.filter(owner=request.user)
+        contest_info_list = DomServerContest.objects.filter(
+            owner=request.user, server_client=client_obj
+        )
 
-    # contest_info_list = get_contest_all(problem_crawler)
-    # print("contest_info_list:", contest_info_list)
     # 使用比賽信息列表來獲取分頁對象
     page_obj = get_page_obj(request, obj_list=contest_info_list)
 

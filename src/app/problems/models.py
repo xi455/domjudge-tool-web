@@ -131,4 +131,4 @@ class ProblemServerLog(models.Model):
     )
 
     def __str__(self):
-        return f"{self.problem} - {self.server_client} - {self.web_problem_id}"
+        return f"{self.problem}"

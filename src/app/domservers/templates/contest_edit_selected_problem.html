@@ -12,7 +12,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-{% include 'include/_breadcrumbs.html' %}
+{% include 'domservers_include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
@@ -46,21 +46,21 @@ delete-confirmation{%endblock %}
                                     </div>
                                 </div>
                             </div>
-                            {% for name, obj in problem_data_dict.items %}
+                            {% for obj in problem_log_objs_list %}
                             <div class="col-12 col-sm-9">
                                 <div class="form-check w-100">
-                                    {% if obj.id in existing_problem_id_list %}
+                                    {% if obj.web_problem_id in existing_problem_id_list %}
                                     <input class="form-check-input" style="width: 1.3rem; height: 1.3rem;"
-                                        type="checkbox" value="{{name}}:{{obj.id}}" name="checkboxGroup" id="{{obj.id}}"
+                                        type="checkbox" value="{{obj.problem.name}}:{{obj.problem.id}}:{{obj.web_problem_id}}" name="checkboxGroup" id="{{obj.problem.id}}"
                                         checked="checked">
                                     {% else %}
                                     <input class="form-check-input" style="width: 1.3rem; height: 1.3rem;"
-                                        type="checkbox" value="{{name}}:{{obj.id}}" name="checkboxGroup"
-                                        id="{{obj.id}}">
+                                        type="checkbox" value="{{obj.problem.name}}:{{obj.problem.id}}:{{obj.web_problem_id}}" name="checkboxGroup"
+                                        id="{{obj.problem.id}}">
                                     {% endif %}
                                     <div class="form-group text-center border rounded p-1 m-2">
-                                        <label class="form-check-label" for="{{obj.id}}">
-                                            {{obj.name}}
+                                        <label class="form-check-label" for="{{obj.problem.id}}">
+                                            {{obj.problem.name}}
                                         </label>
                                     </div>
                                 </div>
@@ -112,9 +112,11 @@ delete-confirmation{%endblock %}
             let checkboxes = document.querySelectorAll('input[name="checkboxGroup"]:checked');
             let selectedCheckboxes = Array.from(checkboxes).map(function (checkbox) {
                 let parts = checkbox.value.split(':');
+                console.log(parts)
                 return {
                     name: parts[0],
-                    id: parts[1]
+                    local_id: parts[1],
+                    id: parts[2],
                 };
             });
             let checkboxHidden = document.querySelector("#checkboxHidden");

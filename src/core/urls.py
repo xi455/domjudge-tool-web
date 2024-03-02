@@ -24,8 +24,8 @@ from app.domservers.views import (
     contest_problem_copy_view,
     contest_problem_shortname_create_view,
     contest_problem_shortname_edit_view,
-    contest_select_problem_edit_view,
     contest_problem_upload_view,
+    contest_select_problem_edit_view,
 )
 from app.problems.views import (
     get_contests_info_and_problem_info_api,

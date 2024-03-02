@@ -13,7 +13,7 @@
 delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
-{% include 'include/_breadcrumbs.html' %}
+{% include 'domservers_include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
@@ -37,21 +37,21 @@ delete-confirmation{%endblock %}
                     {% if page_obj %}
                         <table class="table">
                             <tbody>
-                            {% for object in page_obj %}
+                            {% for obj in page_obj %}
                                 <tr>
                                     <th scope="row">{{ forloop.counter }}</th>
-                                    <td>{{ object.short_name }}</td>
-                                    <td>{{ object.name }}</td>
-                                    <td>{{ object.contest_log.all.count }}</td>
-                                    {% if object.enabled == "yes" %}
+                                    <td>{{ obj.short_name }}</td>
+                                    <td>{{ obj.name }}</td>
+                                    <td>{{ obj.filtered_contest_log.count }}</td>
+                                    {% if obj.enabled == True %}
                                         <td>已啟用</td>
                                     {% else %}
                                         <td>未啟用</td>
                                     {% endif %}
                                     <td>
-                                        <a href="{% url 'contest_information_copy' server_client_id object.cid %}"
+                                        <a href="{% url 'contest_information_copy' server_client_id obj.cid %}"
                                             class="btn btn-primary btn-sm">複製</a>
-                                        <a href="{% url 'contest_information_edit' server_client_id object.id object.cid %}"
+                                        <a href="{% url 'contest_information_edit' server_client_id obj.id obj.cid %}"
                                             class="btn btn-outline-primary btn-sm">編輯</a>
                                     </td>
                                 </tr>

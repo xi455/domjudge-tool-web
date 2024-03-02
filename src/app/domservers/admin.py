@@ -60,8 +60,8 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     @action(label="取得考區資訊")
     def get_contest_info(self, request, obj):
-        problem_crawler = create_problem_crawler(obj)
-        page_obj = get_contest_all_and_page_obj(request, problem_crawler)
+
+        page_obj = get_contest_all_and_page_obj(request, obj)
 
         context = {
             "page_obj": page_obj,  # 將 page_obj 加入到上下文中

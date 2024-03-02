@@ -162,7 +162,7 @@ class DomServerContestForm(forms.ModelForm):
             )
 
         self.parsed_activate_time = dt
-        if hasattr(self, "parsed_start"):           
+        if hasattr(self, "parsed_start"):
             if self.parsed_activate_time > self.parsed_start:
                 raise forms.ValidationError(
                     ("啟動時間必須小於開始時間"),
