@@ -17,7 +17,9 @@ from utils.views import get_available_apps
 @admin.register(DomServerContest)
 class DomServerContestAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_display = [
-        "id",
+        "owner",
+        "server_client",
+        "short_name",
         "cid",
     ]
 

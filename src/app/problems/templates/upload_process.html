@@ -47,13 +47,13 @@
                                         <th scope="row">{{ forloop.counter }}</th>
                                         <td>{{ name }}</td>
                                          
-                                        {% if value.web_problem_state == "新增" %}
-                                            <td>已上傳</td>
-                                        {% else %}
+                                        {% if value.web_problem_state == "未上傳" %}
                                             <td>未上傳</td>
-                                            {% endif %}
+                                        {% else %}
+                                            <td>已上傳</td>
+                                        {% endif %}
                                             
-                                        {% if value.web_problem_state == "新增" %}
+                                        {% if value.web_problem_state == "已上傳" %}
                                             <td>
                                                 <button type="button" name="errorButton" class="btn btn-danger btn-sm" onclick="removeRow(this)">移除</button>
                                             </td>
@@ -146,8 +146,8 @@
                 <input type="hidden" name="problemHiddenID" value="${items.problem_id}">
                 <th scope="row">${index + 1}</th>
                 <td>${key}</td>
-                <td>${items.web_problem_state == '新增' ? '已上傳' : '未上傳'}</td>
-                <td>${items.web_problem_state == '新增' ? '<button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">移除</button>' : ''}</td>
+                <td>${items.web_problem_state == '已上傳' ? '已上傳' : '未上傳'}</td>
+                <td>${items.web_problem_state == '已上傳' ? '<button type="button" name="errorButton" class="btn btn-danger btn-sm" onclick="removeRow(this)">移除</button>' : ''}</td>
                 </tr>
             `;
             index++;

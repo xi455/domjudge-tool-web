@@ -55,7 +55,7 @@ def get_problem_log_web_id_list(cid, problem_crawler):
 
 
 def create_problem_log_format_and_record(
-    request, client_obj, contest_obj, problem_info_dict
+    request, client_obj, contest_obj, problem_info_dict, no_existing_problem_id_set=None
 ):
     """
     Create problem log format and record.
@@ -65,6 +65,7 @@ def create_problem_log_format_and_record(
         client_obj: The client object.
         contest_obj: The contest object.
         problem_info_dict: The dictionary containing problem information.
+        no_existing_problem_id_set: Set of problem IDs that do not exist yet (optional).
 
     Returns:
         None
@@ -72,13 +73,17 @@ def create_problem_log_format_and_record(
     owner = User.objects.get(username=request.user.username)
     problem_crawler = create_problem_crawler(client_obj)
 
-    problem_log_web_id_list = get_problem_log_web_id_list(
-        contest_obj.cid, problem_crawler
-    )
+    if no_existing_problem_id_set is None:
+        problem_id_list = get_problem_log_web_id_list(
+            contest_obj.cid, problem_crawler
+        )
+    else:
+        problem_id_list = [_ for _ in no_existing_problem_id_set]
 
     problems_obj_data_dict = dict()
-    for id in problem_log_web_id_list:
-        problem_obj = Problem.objects.get(id=problem_info_dict.get(id).get("local_id"))
+    for id in problem_id_list:
+        local_id = problem_info_dict.get(id).get("local_id")
+        problem_obj = Problem.objects.get(id=local_id)
 
         problems_obj_data_dict.update(
             {
@@ -134,6 +139,7 @@ def update_problem_log_state(request, state, client_obj, contest_obj):
 
         if state == "新增":
             obj.web_problem_state = "新增"
+
 
     ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
 

@@ -110,14 +110,23 @@ def upload_problem_info_process(queryset, server_object):
     """
     upload_problem_info = dict()
     for query in queryset:
-        problem_record_object = (
-            query.problem_log.filter(server_client=server_object)
-            .order_by("-id")
-            .first()
-        )
-        web_problem_state = (
-            problem_record_object.web_problem_state if problem_record_object else "移除"
-        )
+        problem_records = query.problem_log.all()
+        clients_host_set = set()
+
+        for record in problem_records:
+            clients_host_set.add(record.server_client.host)
+
+        if server_object.host not in clients_host_set:
+            web_problem_state = "未上傳"
+        else:
+            web_problem_state = "已上傳"
+        # else:
+        #     problem_record_object = (
+        #         problem_records.filter(server_client=server_object)
+        #         .order_by("-id")
+        #         .first()
+        #     )
+        #     web_problem_state = "已上傳" if problem_record_object else "未上傳"
 
         upload_problem_info[query.name] = {
             "web_problem_state": web_problem_state,

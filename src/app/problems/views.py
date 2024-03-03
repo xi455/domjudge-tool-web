@@ -148,11 +148,18 @@ def get_contests_info_and_problem_info_api(request):
 
         contest_name = form.cleaned_data.get("name", None)
         serverclient = get_object_or_404(DomServerClient, name=contest_name)
-        problem_crawler = create_problem_crawler(server_client=serverclient)
 
-        server_contests_info_dict = problem_crawler.get_contests_list_all()
+        if request.user.is_superuser:
+            server_contests_info_dict = DomServerContest.objects.filter(
+                server_client=serverclient
+            )
+        else:
+            server_contests_info_dict = DomServerContest.objects.filter(
+                owner=request.user, server_client=serverclient
+            )
+
         contests_data = {
-            key: obj.contest_id for key, obj in server_contests_info_dict.items()
+            obj.short_name: obj.cid for obj in server_contests_info_dict
         }
 
         response_data = {

@@ -85,7 +85,7 @@ urlpatterns = [
         name="contest_select_problem_edit",
     ),
     path(
-        "contest/<id>/<cid>/copy/",
+        "contest/<id>/<contest_id>/<cid>/copy/",
         contest_problem_copy_view,
         name="contest_information_copy",
     ),

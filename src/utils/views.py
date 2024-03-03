@@ -2,8 +2,6 @@ import json
 
 from django.contrib import admin
 
-from app.domservers import exceptions as domserver_exceptions
-from app.users.models import User
 from utils.exceptions import CrawlerHandleContestShortNameException
 
 
@@ -21,6 +19,23 @@ def get_available_apps(request):
     available_apps = site.each_context(request).get("available_apps")
     return available_apps  # 獲取 sidebar 所有應用
 
+def get_contest_selected_problem_local_id(form_data):
+    """
+    Get the local ID of the selected problem in the contest.
+
+    Args:
+        form_data (dict): The form data containing the problem information.
+
+    Returns:
+        dict: Returning problem content dict.
+    """
+    problem_info = json.loads(form_data.get("shortNameHidden"))
+    
+    problem_info_dict = dict()
+    for data in problem_info:
+        problem_info_dict[data.get("id")] = data
+
+    return problem_info_dict
 
 def contest_problem_shortname_process(form_data):
     """

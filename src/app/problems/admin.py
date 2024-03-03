@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 from django_object_actions import DjangoObjectActions, action
 from pydantic import BaseModel
 
-from app.domservers.models import DomServerClient
+from app.domservers.models import DomServerClient, DomServerContest
 from utils.admins import (
     create_problem_crawler,
     get_newest_problems_log,
@@ -347,10 +347,14 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             return messages.error(request, "請先新增伺服器資訊！！")
 
         first_server_object = server_objects[0]
-        problem_crawler = create_problem_crawler(first_server_object)
 
-        data = problem_crawler.get_contests_list_all()
-        contest_name = [(name, obj.contest_id) for name, obj in data.items()]
+        if request.user.is_superuser:
+            data = DomServerContest.objects.filter(server_client=first_server_object)
+        else:
+            data = DomServerContest.objects.filter(
+                owner=request.user, server_client=first_server_object
+            )
+        contest_name = [(obj.short_name, obj.cid) for obj in data]
 
         problem_info = upload_problem_info_process(
             queryset=queryset, server_object=first_server_object
