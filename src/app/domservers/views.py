@@ -52,9 +52,13 @@ def filter_contest_selected_problem(request, client_obj):
         list: A list of ProblemServerLog objects return the filtered contest's selected problems.
     """
     owner = User.objects.get(username=request.user.username)
-    problem_objs = ProblemServerLog.objects.filter(
-        owner=owner, server_client=client_obj
-    )
+
+    if owner.is_superuser:
+        problem_objs = ProblemServerLog.objects.filter(server_client=client_obj)
+    else:
+        problem_objs = ProblemServerLog.objects.filter(
+            owner=owner, server_client=client_obj
+        )
 
     problem_objs_id_list = list()
     problem_log_objs_list = list()
@@ -79,12 +83,13 @@ def contest_create_view(request):
 
             problem_crawler = create_problem_crawler(client_obj)
             
-            problem_log_objs_list = filter_contest_selected_problem(request, client_obj)
             contest_all_name = problem_crawler.get_contest_all_name()
 
             if form.cleaned_data["short_name"] in contest_all_name:
                 messages.error(request, "考區簡稱重複！！請重新輸入")
                 return redirect(f"/contest/create/?server_client_id={server_client_id}")
+            
+            problem_log_objs_list = filter_contest_selected_problem(request, client_obj)
 
             create_response = contest_format_and_upload(
                 problem_crawler, creat_contest_data
@@ -362,16 +367,10 @@ def contest_problem_shortname_edit_view(request, id, cid):
     contest_obj = DomServerContest.objects.get(
         server_client=client_obj, short_name=contest_info.get("contest[shortname]")
     )
-
-    for key, value in contest_info.items():
-        print(f"{key}: {value}")
     
-    problem_exist_valid_result = validator_problem_exist(contest_info)
-    
-    if problem_exist_valid_result:
-        # Delete the problem information in the old contest area
-        update_problem_log_state(request, "移除", client_obj, contest_obj)
-        old_problem_info_remove_process(problem_crawler=problem_crawler, cid=cid)
+    # Delete the problem information in the old contest area
+    update_problem_log_state(request, "移除", client_obj, contest_obj)
+    old_problem_info_remove_process(problem_crawler=problem_crawler, cid=cid)
 
     # Update contest information
     upload_response = problem_crawler.contest_problem_upload(
@@ -379,6 +378,8 @@ def contest_problem_shortname_edit_view(request, id, cid):
     )
 
     if upload_response:
+        problem_exist_valid_result = validator_problem_exist(contest_info)
+        
         if problem_exist_valid_result:
             update_problem_log_state(request, "新增", client_obj, contest_obj)
 
@@ -493,7 +494,7 @@ def contest_select_problem_edit_view(request, id, cid):
 
     # Extract contest data and selected problems from the request
     contest_information = json.loads(request.POST.get("contestDataJson"))
-    selected_problem = json.loads(request.POST.get("selectedCheckboxes"))
+    selected_problem = json.loads(request.POST.get("selectedProblem"))
 
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
@@ -535,7 +536,7 @@ def contest_select_problem_edit_view(request, id, cid):
     return render(request, "contest_problem_shortname_edit.html", context)
 
 
-def handle_contest_copy_and_upload(problem_crawler, cid):
+def rename_shortname_and_handle_contest_copy_and_upload(problem_crawler, cid):
     # Get now time
     current_time = datetime.now()
     format_time = current_time.strftime("%Y%m%d%H%M%S")
@@ -592,28 +593,22 @@ def create_copy_contest_record(contest_shortname_rename, contest_obj, problem_cr
 
     return new_contest_obj
 
-def get_filter_data(owner, client_obj, contest_obj):
+def get_filter_data(client_obj, contest_obj):
     """
-    Get the filtered problem logs based on the owner, client object, and contest object.
+    Get the filtered problem logs based, client object, and contest object.
 
     Parameters:
-    owner (User): The owner of the problem logs.
     client_obj (Client): The client object.
     contest_obj (Contest): The contest object.
 
     Returns:
     QuerySet: The filtered problem logs.
     """
-    if owner.is_superuser:
-        problem_logs = ProblemServerLog.objects.filter(
-            server_client=client_obj, contest=contest_obj
-        ).order_by("-id")
-    else:
-        problem_logs = ProblemServerLog.objects.filter(
-            owner=owner,
-            server_client=client_obj,
-            contest=contest_obj,
-        ).order_by("-id")
+
+    problem_logs = ProblemServerLog.objects.filter(
+        server_client=client_obj,
+        contest=contest_obj,
+    ).order_by("-id")
 
     return problem_logs
 
@@ -664,15 +659,14 @@ def contest_problem_copy_view(request, id, contest_id, cid):
         available_apps = get_available_apps(request)
 
         # Rename the contest shortname and upload the contest
-        contest_shortname_rename = handle_contest_copy_and_upload(problem_crawler, cid)
+        contest_shortname_rename = rename_shortname_and_handle_contest_copy_and_upload(problem_crawler, cid)
 
         # Create a new contest area record
         contest_obj = DomServerContest.objects.get(id=contest_id)
         new_contest_obj = create_copy_contest_record(contest_shortname_rename, contest_obj, problem_crawler)
 
         # Get the problem information and upload it for processing
-        owner = contest_obj.owner
-        problem_logs = get_filter_data(owner, client_obj, contest_obj)
+        problem_logs = get_filter_data(client_obj, contest_obj)
         get_valid_problem_log_and_upload_process(request, problem_logs, client_obj, new_contest_obj)
 
         # Get all contest

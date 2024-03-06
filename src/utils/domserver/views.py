@@ -119,19 +119,11 @@ def update_problem_log_state(request, state, client_obj, contest_obj):
         contest_obj.cid, problem_crawler
     )
 
-    if owner.is_superuser:  # contest
-        problem_log = ProblemServerLog.objects.filter(
-            server_client=client_obj,
-            contest=contest_obj,
-            web_problem_id__in=problem_log_web_id_list,
-        )
-    else:
-        problem_log = ProblemServerLog.objects.filter(
-            owner=owner,
-            server_client=client_obj,
-            contest=contest_obj,
-            web_problem_id__in=problem_log_web_id_list,
-        )
+    problem_log = ProblemServerLog.objects.filter(
+        server_client=client_obj,
+        contest=contest_obj,
+        web_problem_id__in=problem_log_web_id_list,
+    )
 
     for obj in problem_log:
         if state == "移除":

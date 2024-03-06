@@ -31,40 +31,49 @@ delete-confirmation{%endblock %}
 
             <div class="card-body">
                 <div id="content-main">
-                    <form action="{% url 'contest_problem_shortname_create' %}" method="post">
+                    <form action="{% url 'contest_problem_shortname_create' %}" method="post" id="formPost">
                         {% csrf_token %}
                         client_name:{{server_client_id}}
                         <input type="hidden" name="server_client_id" value="{{server_client_id}}">
                         <div class="row">
-                            <div class="col-12 col-sm-9">
-                                <div class="form-check w-100">
-                                    <input type="checkbox" style="width: 1.3rem; height: 1.3rem;"
-                                        class="form-check-input" id="selectAll">
-                                    <div class="form-group text-center border rounded p-1 m-2">
-                                        <label class="form-check-label" for="selectAll">全選</label>
+                            <div class="d-flex col-12 col-sm-9">
+                                <div class="card ml-3 w-100" style="height: 28rem;">
+                                    <div class="card-header">
+                                        選擇題目
+                                    </div>
+                                    <ul id="problemList" class="list-group list-group-flush overflow-auto">
+                                        {% for obj in problem_log_objs_list %}
+                                            <li class="list-group-item text-center" data-name={{obj.problem.name}} data-localpid={{obj.problem.id}} data-pid={{obj.web_problem_id}}>{{ obj.problem.name}}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    <div class="card-footer text-muted text-center but-pointer" style="width: 100%; margin-top: auto; cursor: pointer;" onclick="allPlusSelection()">
+                                        全部加選
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right-circle-fill" viewBox="0 0 16 16">
+                                            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0M4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                    
+                                <div class="card ml-3 w-100" style="height: 28rem;">
+                                    <div class="card-header">
+                                        已選題目
+                                    </div>
+                                    <ul id="selectedProblem" class="list-group list-group-flush overflow-auto">
+                                    </ul>
+                                    <div class="card-footer text-muted text-center but-pointer" style="width: 100%; margin-top: auto; cursor: pointer;" onclick="withdrawalOfAll()">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle-fill" viewBox="0 0 16 16">
+                                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0m3.5 7.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                                        </svg>
+                                        全部退選
                                     </div>
                                 </div>
                             </div>
-                            {% for obj in problem_log_objs_list %}
-                            <div class="col-12 col-sm-9">
-                                <div class="form-check w-100">
-                                    <input class="form-check-input" style="width: 1.3rem; height: 1.3rem;"
-                                        type="checkbox" value="{{obj.problem.name}}:{{obj.problem.id}}:{{obj.web_problem_id}}" name="checkboxGroup"
-                                        id="{{obj.problem.id}}">                                    
-                                    <div class="form-group text-center border rounded p-1 m-2">
-                                        <label class="form-check-label" for="{{obj.problem.id}}">
-                                            {{obj.problem.name}}
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
 
                             <div class="col-12 col-sm-3 mt-auto">
                                 <input type="hidden" name="contestDataJson" id="contestHidden">
-                                <input type="hidden" name="selectedCheckboxes" id="checkboxHidden">
+                                <input type="hidden" name="selectedCheckboxes" id="selectedProblemHidden">
                                 <div class="form-group">
-                                    <button onclick="getSelectedCheckboxes()" type="button"
+                                    <button onclick="getSelectedProblem()" type="button"
                                         class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link form-control">
                                         創建考區
                                     </button>
@@ -85,38 +94,8 @@ delete-confirmation{%endblock %}
     </div>
 
     <script>
-        let select_all = document.querySelector("#selectAll")
-        select_all.addEventListener("change", function () {
-            // 獲取所有其他複選框
-            let checkboxes = document.querySelectorAll(".form-check-input");
-
-            // 將所有其他複選框的狀態設置為與全選框相同
-            checkboxes.forEach(function (checkbox) {
-                checkbox.checked = document.getElementById("selectAll").checked;
-            });
-        });
-
-        function getSelectedCheckboxes() {
-            // 獲取所有選中的复選框的值
-            let checkboxes = document.querySelectorAll('input[name="checkboxGroup"]:checked');
-            let selectedCheckboxes = Array.from(checkboxes).map(function (checkbox) {
-                let parts = checkbox.value.split(':');
-                console.log(parts);
-                return {
-                    name: parts[0],
-                    local_id: parts[1],
-                    id: parts[2],
-                };
-            });
-            let checkboxHidden = document.querySelector("#checkboxHidden");
-            let contestHidden = document.querySelector("#contestHidden");
-            let form = document.querySelector("form[method='post']");
-
-            checkboxHidden.value = JSON.stringify(selectedCheckboxes);
-            contestHidden.value = "{{ contest_data_json|escapejs }}";
-
-            form.submit();
-        }
+        let contestDataJson = "{{ contest_data_json|escapejs }}";
     </script>
+    <script src="{% static 'js/selected_problem.js' %}"></script>
 
     {% endblock %}

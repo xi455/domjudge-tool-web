@@ -120,13 +120,6 @@ def upload_problem_info_process(queryset, server_object):
             web_problem_state = "未上傳"
         else:
             web_problem_state = "已上傳"
-        # else:
-        #     problem_record_object = (
-        #         problem_records.filter(server_client=server_object)
-        #         .order_by("-id")
-        #         .first()
-        #     )
-        #     web_problem_state = "已上傳" if problem_record_object else "未上傳"
 
         upload_problem_info[query.name] = {
             "web_problem_state": web_problem_state,
