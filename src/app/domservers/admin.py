@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.urls import path
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
@@ -40,7 +41,7 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
         "api_version",
     ]
 
-    change_actions = ("get_contest_info",)
+    change_actions = ("get_contest_info_view",)
 
     form = DomServerAccountForm
 
@@ -59,9 +60,29 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
             return queryset
 
         return queryset.filter(owner=request.user)
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path("contest-items/<obj_id>/", self.admin_site.admin_view(self.get_contest_info_view), name="contest-items"),
+        ]
+        return custom_urls + urls
 
     @action(label="取得考區資訊")
-    def get_contest_info(self, request, obj):
+    def get_contest_info_view(self, request, obj=None, obj_id=None):
+        if obj_id is not None:
+            obj = DomServerClient.objects.get(id=obj_id)
+
+
+        if "page_number" in request.session:
+            page_number = request.session["page_number"]
+
+            new_get = request.GET.copy()
+            new_get["page"] = page_number
+
+            request.GET = new_get
+
+            del request.session["page_number"]
 
         page_obj = get_contest_all_and_page_obj(request, obj)
 

@@ -66,6 +66,7 @@ def get_page_obj(request, obj_list):
 
     paginator = Paginator(obj_list, 8)
     page = request.GET.get("page")
+    print("page2:", page, type(page))
     page_obj = paginator.get_page(page)
 
     return page_obj

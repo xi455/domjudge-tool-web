@@ -144,7 +144,6 @@ def contest_create_view(request):
 def contest_problem_upload_view(request, id):
     form_data = request.POST
     create_contest_info = contest_problem_shortname_process(form_data=form_data)
-    available_apps = get_available_apps(request)
 
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
@@ -163,18 +162,7 @@ def contest_problem_upload_view(request, id):
     else:
         messages.error(request, "題目上傳失敗！！")
 
-    # get all contest
-    page_obj = get_contest_all_and_page_obj(request=request, client_obj=client_obj)
-
-    context = {
-        "page_obj": page_obj,
-        "server_client_id": client_obj.id,
-        "server_client_name": client_obj.name,
-        "opts": client_obj._meta,
-        "available_apps": available_apps,
-    }
-
-    return render(request, "contest_list.html", context)
+    return redirect("admin:contest-items", obj_id=client_obj.id)
 
 
 @require_http_methods(["POST"])
@@ -214,7 +202,7 @@ def contest_problem_shortname_create_view(request):
 
 
 @require_http_methods(["GET", "POST"])
-def contest_information_edit_view(request, server_id, contest_id, cid):
+def contest_information_edit_view(request, server_id, contest_id, cid, page_number):
     client_obj = DomServerClient.objects.get(id=server_id)
     problem_crawler = create_problem_crawler(client_obj)
     available_apps = get_available_apps(request)
@@ -273,12 +261,14 @@ def contest_information_edit_view(request, server_id, contest_id, cid):
     if request.method == "GET":
         form = DomServerContestForm(instance=contest_obj)
 
+    request.session["page_number"] = page_number
     context = {
         "server_client_id": client_obj.id,
         "server_client_name": client_obj.name,
         "contest_id": contest_id,
         "cid": cid,
         "form": form,
+        "page_number": page_number,
         "opts": client_obj._meta,
         "available_apps": available_apps,
     }
@@ -360,7 +350,6 @@ def contest_problem_shortname_edit_view(request, id, cid):
     form_data = request.POST
     client_obj = DomServerClient.objects.get(id=id)
     problem_crawler = create_problem_crawler(client_obj)
-    available_apps = get_available_apps(request)
 
     # Get the latest contest area information
     contest_info = contest_problem_shortname_process(form_data=form_data)
@@ -385,23 +374,11 @@ def contest_problem_shortname_edit_view(request, id, cid):
 
         check_create_problem_log_for_contest_edit(request, client_obj, contest_obj, form_data, problem_crawler, cid)
         
-        # test ----------------
         messages.success(request, "考區編輯成功！！")
     else:
         messages.error(request, "考區編輯失敗！！")
 
-    # get all contest
-    page_obj = get_contest_all_and_page_obj(request=request, client_obj=client_obj)
-
-    context = {
-        "page_obj": page_obj,
-        "server_client_id": client_obj.id,
-        "server_client_name": client_obj.name,
-        "opts": client_obj._meta,
-        "available_apps": available_apps,
-    }
-
-    return render(request, "contest_list.html", context)
+    return redirect('admin:contest-items', obj_id=client_obj.id)
 
 
 def old_problem_info_remove_process(problem_crawler, cid):
@@ -656,7 +633,6 @@ def contest_problem_copy_view(request, id, contest_id, cid):
     try:
         client_obj = DomServerClient.objects.get(id=id)
         problem_crawler = create_problem_crawler(client_obj)
-        available_apps = get_available_apps(request)
 
         # Rename the contest shortname and upload the contest
         contest_shortname_rename = rename_shortname_and_handle_contest_copy_and_upload(problem_crawler, cid)
@@ -669,18 +645,7 @@ def contest_problem_copy_view(request, id, contest_id, cid):
         problem_logs = get_filter_data(client_obj, contest_obj)
         get_valid_problem_log_and_upload_process(request, problem_logs, client_obj, new_contest_obj)
 
-        # Get all contest
-        page_obj = get_contest_all_and_page_obj(request=request, client_obj=client_obj)
-
-        context = {
-            "page_obj": page_obj,
-            "server_client_id": client_obj.id,
-            "server_client_name": client_obj.name,
-            "opts": client_obj._meta,
-            "available_apps": available_apps,
-        }
-
-        return render(request, "contest_list.html", context)
+        return redirect("admin:contest-items", obj_id=client_obj.id)
     except Exception:
         raise domserver_exceptions.ContestCopyException(
             "Errors in copying the Contest area."

@@ -70,7 +70,7 @@ urlpatterns = [
         name="contest_problem_create",
     ),
     path(
-        "contest/<server_id>/<contest_id>/<cid>/edit/",
+        "contest/<server_id>/<contest_id>/<cid>/edit/page_number=<page_number>",
         contest_information_edit_view,
         name="contest_information_edit",
     ),
