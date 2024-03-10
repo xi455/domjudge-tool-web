@@ -1,4 +1,5 @@
 from django.core.files.storage import default_storage
+from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator, ValidationError
 from django.db import models
 

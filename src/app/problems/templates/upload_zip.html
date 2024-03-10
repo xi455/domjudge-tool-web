@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block breadcrumbs %}
+{% include 'problems_include/_breadcrumbs.html' %}
+{% endblock %}
+
+{% block content_title %}
+題目
+{% endblock %}
+{% block content %}
+<div class="col-12">
+    <div class="card card-primary card-outline">
+        <form action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="container d-flex flex-column align-items-center">
+                <h1 class="mt-5" id="ai_verify">上傳題目壓縮檔</h1>
+    
+                <ul class="ps-0">
+                    點選圖標後點擊要上傳的 zip 檔案，本系統只接受 zip 檔案。
+                </ul>
+    
+                <div class="w-75 d-flex justify-content-center align-items-center" id="uploadElement"
+                    style="height: 23rem; border: 1px dashed #ccc; border-radius: 5px; cursor: pointer;">
+                    <input type="file" id="file" name="file" style="display: none;" accept=".zip" multiple>
+                    <i class="fa fa-upload" aria-hidden="true" style="font-size: 100px;"></i>
+                </div>
+    
+                <div class="w-100 m-3 text-center">
+                    <button type="submit" class="btn btn-primary m-2" style="width: 15rem;">確認</button>
+                    <a href="{% url 'admin:problems_problem_changelist' %}" class="btn btn-outline-primary m-2" style="width: 15rem;">返回</a>
+                </div>
+                
+                <div class="w-75" id="fileList"></div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    document.querySelector("#uploadElement").addEventListener("click", function () {
+        document.querySelector("#file").click();
+    });
+
+    document.querySelector("#file").addEventListener('change', function() {
+        let fileList = this.files;
+        let fileNames = Array.from(fileList).map(file => file.name);
+        let fileListElement = document.querySelector("#fileList");
+        fileListElement.innerHTML = '';
+        fileNames.forEach(fileName => {
+            fileListElement.innerHTML += `
+                <div class="card">
+                    <div class="card-body">
+                        ${fileName}
+                    </div>
+                </div>
+            `;
+        });
+    });
+</script>
+{% endblock %}

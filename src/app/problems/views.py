@@ -3,11 +3,14 @@ import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
-from app.domservers.models.dom_server import DomServerClient, DomServerContest
 from app.users.models import User
+from app.problems.unzip import handle_upload_required_file, handle_unzip_problem_obj
+from app.domservers.models.dom_server import DomServerClient, DomServerContest
+
+from utils.views import get_available_apps
 from utils.admins import create_problem_crawler, upload_problem_info_process
 from utils.problems.views import create_problem_log, handle_problems_upload_info
 
@@ -23,6 +26,34 @@ def get_zip(request, pk):
     obj = get_object_or_404(Problem, pk=pk)
     response = build_zip_response(obj)
     return response
+
+
+@login_required(login_url="/admin/login/")
+def upload_zip_view(request):
+    available_apps = get_available_apps(request)
+    opts = Problem._meta
+
+    if request.method == "POST":
+        files = request.FILES.getlist('file')
+        for file in files:
+            # Get required file information
+            file_info_dict = handle_upload_required_file(file)
+        
+            # Create problem object and problem in/out object
+            handle_unzip_problem_obj(file_info_dict)
+
+        context = {
+            "available_apps": available_apps,
+        }
+
+        return redirect("/admin/problems/problem/")
+
+    if request.method == "GET":
+        context = {
+            "opts": opts,
+            "available_apps": available_apps,
+        }
+        return render(request, "upload_zip.html", context)
 
 
 @require_http_methods(["POST"])

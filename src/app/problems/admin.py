@@ -48,8 +48,8 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     # form = ProblemNameForm
 
     list_display = (
-        "short_name",
         "name",
+        "short_name",
         "time_limit",
         "owner",
         "id",
@@ -85,6 +85,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         "updown_selected_problem",
         "updown_selected_contest",
     ]
+    change_list_template = 'admin/problems/change_list.html'
     change_actions = ("update_problem_testcase", "update_problem_information")
 
     def get_queryset(self, request):

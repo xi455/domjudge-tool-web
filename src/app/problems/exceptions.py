@@ -8,3 +8,7 @@ class ProblemDownloaderLoginException(ProblemDownloaderException):
 
 class ProblemDownloaderDownloadFailException(ProblemDownloaderException):
     pass
+
+
+class ProblemUnZipException(Exception):
+    pass
