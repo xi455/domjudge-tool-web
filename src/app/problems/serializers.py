@@ -46,7 +46,6 @@ class ProblemSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
-            "short_name",
             "description_file",
             "time_limit",
             "int_out_data",

@@ -29,18 +29,36 @@ def get_zip(request, pk):
 
 
 @login_required(login_url="/admin/login/")
-def upload_zip_view(request):
+def upload_zip_view(request, pk=None):
     available_apps = get_available_apps(request)
     opts = Problem._meta
 
     if request.method == "POST":
         files = request.FILES.getlist('file')
-        for file in files:
-            # Get required file information
+
+        if pk is None:
+            for file in files:
+                # Get required file information
+                file_info_dict = handle_upload_required_file(file)
+            
+                # Create problem object and problem in/out object
+                handle_unzip_problem_obj(file_info_dict)
+
+        if pk is not None:
+            problem = get_object_or_404(Problem, pk=pk)
+            problem_log = problem.problem_log.all()
+
+            file = files[0]
             file_info_dict = handle_upload_required_file(file)
-        
-            # Create problem object and problem in/out object
-            handle_unzip_problem_obj(file_info_dict)
+            new_problem_obj = handle_unzip_problem_obj(file_info_dict)
+
+            updated_logs = list()
+            for log in problem_log:
+                log.problem = new_problem_obj
+                updated_logs.append(log)
+            
+            ProblemServerLog.objects.bulk_update(updated_logs, ['problem'])
+            problem.delete()
 
         context = {
             "available_apps": available_apps,
@@ -202,3 +220,21 @@ def get_contests_info_and_problem_info_api(request):
     else:
         errors = form.errors
         return JsonResponse({"errors": errors}, status=400)
+
+
+def check_zip_view(request, pk):
+    problem = get_object_or_404(Problem, pk=pk)
+    available_apps = get_available_apps(request)
+
+    if request.method == "POST":
+        return redirect("problem:upload_zip_with_pk", pk = problem.id)
+
+    if request.method == "GET":
+
+        context = {
+            "obj": problem,
+            "opts": Problem._meta,
+            "available_apps": available_apps,
+
+        }
+        return render(request, "check_zip.html", context)

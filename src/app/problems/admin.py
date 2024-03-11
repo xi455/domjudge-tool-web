@@ -49,14 +49,14 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     list_display = (
         "name",
-        "short_name",
         "time_limit",
         "owner",
         "id",
         "make_zip",
+        "replacement_problem",
     )
     list_filter = ("create_at", "update_at")
-    search_fields = ("name", "short_name")
+    search_fields = ["name"]
     inlines = [ProblemInOutInline]
     readonly_fields = ("id", "owner", "update_illustrate")
     fieldsets = (
@@ -71,14 +71,13 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             {
                 "fields": (
                     "name",
-                    "short_name",
                     "description_file",
                     "time_limit",
                 ),
             },
         ),
     )
-    ordering = ("short_name", "name", "id")
+    ordering = ("name", "id")
     list_select_related = ("owner",)
     actions = [
         "upload_selected_problem",
@@ -319,6 +318,12 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         return mark_safe(f'<a href="{url}">下載 zip</a>')
 
     make_zip.short_description = "下載壓縮檔"  # type: ignore
+
+    def replacement_problem(self, obj, **kwargs):
+        url = reverse_lazy("problem:check_zip", kwargs={"pk": str(obj.id)})
+        return mark_safe(f'<a href="{url}">替換題目</a>')
+    
+    replacement_problem.short_description = "替換"  # type: ignore
 
     def save_model(self, request, obj, form, change):
         if not obj.owner_id:

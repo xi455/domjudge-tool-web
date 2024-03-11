@@ -19,7 +19,7 @@ def validate_problem_name(value):
 
 class Problem(BaseModel):
     name = models.CharField("題目名稱", max_length=255, validators=[validate_problem_name])
-    short_name = models.CharField("題目代號", max_length=50, help_text="ex: p01")
+    # short_name = models.CharField("題目代號", max_length=50, help_text="ex: p01")
     description_file = models.FileField(
         "題目說明檔",
         upload_to=problem_file_path,
@@ -48,7 +48,7 @@ class Problem(BaseModel):
     class Meta:
         verbose_name = "題目"
         verbose_name_plural = "題目"
-        ordering = ["short_name", "-update_at", "-create_at"]
+        ordering = ["-update_at", "-create_at"]
 
 
 def normalization_text(txt: str):
@@ -116,6 +116,7 @@ class ProblemServerLog(models.Model):
         on_delete=models.CASCADE,
         related_name="contest_log",
         verbose_name="考區紀錄",
+        null=True,
         # editable=False,
     )
     web_problem_id = models.CharField("網站題目ID", max_length=68)

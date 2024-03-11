@@ -69,11 +69,13 @@ def handle_unzip_problem_obj(file_info_dict):
         file_info_dict (dict): A dictionary containing information about the file.
 
     Returns:
-        None
+        problem_obj: The created Problem object.
     """
-    problem_log = create_unzip_problem_obj(file_info_dict)
+    problem_obj = create_unzip_problem_obj(file_info_dict)
     format_data = handle_unzip_probleminout_data_format(file_info_dict)
-    create_unzip_probleminout_obj(format_data, problem_log)
+    create_unzip_probleminout_obj(format_data, problem_obj)
+
+    return problem_obj
     
 
 def create_problem_pdf(file_info_dict):
@@ -111,7 +113,6 @@ def create_unzip_problem_obj(file_info_dict):
     pdf_file = create_problem_pdf(file_info_dict)
     problem_obj = Problem.objects.create(
         name=file_info_dict["problem_title"],
-        short_name="",
         description_file=pdf_file,
         time_limit=file_info_dict["time_limit"],
         owner=User.objects.get(username="admin"),

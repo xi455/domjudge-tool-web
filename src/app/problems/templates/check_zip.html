@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation{% endblock %}
+
+{% block breadcrumbs %}
+{% include 'problems_include/_breadcrumbs.html' %}
+{% endblock %}
+
+{% block content_title %}
+題目取代
+{% endblock %}
+{% block content %}
+<div class="col-12">
+    <div class="card card-primary card-outline">
+        <form action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="container d-flex flex-column align-items-center">
+                <h1 class="mt-5" id="ai_verify">取代確認</h1>
+    
+                <ul class="ps-0">
+                    您確定要刪除並取代 "{{ obj.name }}" 題目嗎?
+                </ul>
+    
+               
+                <div class="w-100 m-3 text-center">
+                    <button type="submit" class="btn btn-danger m-2" style="width: 15rem;">確認</button>
+                    <a href="{% url 'admin:problems_problem_changelist' %}" class="btn btn-primary m-2" style="width: 15rem;">返回</a>
+                </div>
+                
+                <div class="w-75" id="fileList"></div>
+            </div>
+
+        </form>
+
+        {% comment %} <form method="post">{% csrf_token %}
+            <div class="d-flex ms-5">
+                <h3>您確定要刪除 "{{ object.found_name }}" 遺失物嗎?</h3>
+                <input type="submit" class="btn btn-danger ms-3 btn-sm" value="刪除">
+            </div>
+        </form> {% endcomment %}
+    </div>
+</div>
+
+{% endblock %}
