@@ -1,5 +1,6 @@
 import json
 
+from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
@@ -12,7 +13,7 @@ from app.domservers.models.dom_server import DomServerClient, DomServerContest
 
 from utils.views import get_available_apps
 from utils.admins import create_problem_crawler, upload_problem_info_process
-from utils.problems.views import create_problem_log, handle_problems_upload_info
+from utils.problems.views import create_problem_log, handle_problems_upload_info, handle_problem_upload_format
 
 from .forms import ServerClientForm
 from .models import Problem, ProblemServerLog
@@ -27,7 +28,76 @@ def get_zip(request, pk):
     response = build_zip_response(obj)
     return response
 
+@transaction.atomic
+def replace_logs_and_create_problem(request, problem_log_objs, new_problem_obj):
+    problem_client_data = dict()
+    updated_logs_obj = list()
+    upload_problem_file_info = handle_problem_upload_format(new_problem_obj)
+    
+    for log in problem_log_objs:
+        if log.server_client not in problem_client_data:
+            problem_crawler = create_problem_crawler(log.server_client)
 
+            (
+                is_success,
+                problems_info_dict,
+                contest_id,
+            ) = problem_crawler.upload_problem(
+                files=[upload_problem_file_info], contest_id=log.contest.cid,
+            )
+
+            if not is_success:
+                return redirect("/admin/problems/problem/")
+
+            problem_client_data[log.server_client] = {
+                "old_pid": log.web_problem_id,
+                "pid": problems_info_dict[new_problem_obj.name],
+                "cid": list(),
+            }
+        else:
+            problem_client_data[log.server_client]["cid"].append(log.contest.cid)
+        
+        log.problem = new_problem_obj
+        log.web_problem_id = problem_client_data[log.server_client]["pid"]
+        updated_logs_obj.append(log)
+
+    ProblemServerLog.objects.bulk_update(updated_logs_obj, ['problem', 'web_problem_id'])
+
+    return problem_client_data
+
+
+def update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_problem_obj):
+    problem_client_data = replace_logs_and_create_problem(request, problem_log_objs, new_problem_obj)
+        
+    for obj, value in problem_client_data.items():
+        problem_crawler = create_problem_crawler(obj)
+        problem_crawler.delete_problem(request, value["old_pid"])
+
+        for cid in value["cid"]:
+            problem_data_info = problem_crawler.get_contest_problems_info(cid)
+            problem_data_info.append({
+                "id": value["pid"],
+                "name": new_problem_obj.name,
+            })
+
+            contest_info = problem_crawler.get_contest_or_problem_information(cid, need_content="contest")
+            
+            # 需在取得原有的problem資料
+            problem_format_info = problem_crawler.problem_format_process(problem_data_info)
+
+            contest_info.update(problem_format_info)
+
+            result = problem_crawler.contest_problem_upload(cid, contest_info)
+
+            if not result:
+                messages.error(request, f"考區 {obj.name} 題目取代失敗！！")
+                return redirect("/admin/problems/problem/")
+
+    messages.success(request, f"考區題目取代成功！！")
+    return redirect("/admin/problems/problem/")
+    
+
+@transaction.atomic
 @login_required(login_url="/admin/login/")
 def upload_zip_view(request, pk=None):
     available_apps = get_available_apps(request)
@@ -36,34 +106,33 @@ def upload_zip_view(request, pk=None):
     if request.method == "POST":
         files = request.FILES.getlist('file')
 
-        if pk is None:
-            for file in files:
-                # Get required file information
-                file_info_dict = handle_upload_required_file(file)
-            
+        try:
+            if pk is None:
+                for file in files:
+                    # Get required file information
+                    file_info_dict = handle_upload_required_file(file)
+                
+                    # Create problem object and problem in/out object
+                    handle_unzip_problem_obj(request, file_info_dict)
+
+            if pk is not None:
+                # files[0] is the first file in the list
+                file_info_dict = handle_upload_required_file(files[0])
+
                 # Create problem object and problem in/out object
-                handle_unzip_problem_obj(file_info_dict)
+                new_problem_obj = handle_unzip_problem_obj(request, file_info_dict)
 
-        if pk is not None:
-            problem = get_object_or_404(Problem, pk=pk)
-            problem_log = problem.problem_log.all()
+                problem = get_object_or_404(Problem, pk=pk)
+                problem_log_objs = problem.problem_log.all()
+                if problem_log_objs:
+                    # Replace problem object in problem log
+                    update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_problem_obj)
+                
+                problem.delete() 
 
-            file = files[0]
-            file_info_dict = handle_upload_required_file(file)
-            new_problem_obj = handle_unzip_problem_obj(file_info_dict)
-
-            updated_logs = list()
-            for log in problem_log:
-                log.problem = new_problem_obj
-                updated_logs.append(log)
+        except Exception as e:
+            print(f"{type(e).__name__}:", e)
             
-            ProblemServerLog.objects.bulk_update(updated_logs, ['problem'])
-            problem.delete()
-
-        context = {
-            "available_apps": available_apps,
-        }
-
         return redirect("/admin/problems/problem/")
 
     if request.method == "GET":
@@ -102,15 +171,12 @@ def problem_upload_view(request):
         is_success,
         problems_info_dict,
         contest_id,
-        message,
     ) = problem_crawler.upload_problem(
         files=problems_upload_info, contest_id=contest_id
     )
 
     if not is_success:
-        messages.error(request, message)
         return redirect("/admin/problems/problem/")
-    messages.success(request, message)
 
     for pname, pid in problems_info_dict.items():
         problems_obj_data_dict[pname].update({"web_problem_id": pid})

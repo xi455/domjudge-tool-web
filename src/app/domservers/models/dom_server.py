@@ -100,7 +100,7 @@ class DomServerContest(BaseModel):
     short_name = models.CharField(
         "考區簡稱",
         max_length=255,
-        unique=True,
+        # unique=True,
     )
     start_time = models.CharField("開始時間", max_length=255)
     end_time = models.CharField("記分牌結束時間", max_length=255)
@@ -126,3 +126,10 @@ class DomServerContest(BaseModel):
     class Meta:
         verbose_name = "DomServer Contest 考場"
         verbose_name_plural = "DomServer Contest 考場"
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["server_client", "cid"],
+                name="unique_server_client_cid",
+            ),
+        ]

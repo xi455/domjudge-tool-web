@@ -82,10 +82,8 @@ def contest_create_view(request):
             client_obj = DomServerClient.objects.get(id=server_client_id)
 
             problem_crawler = create_problem_crawler(client_obj)
-            
-            contest_all_name = problem_crawler.get_contest_all_name()
 
-            if form.cleaned_data["short_name"] in contest_all_name:
+            if DomServerContest.objects.filter(server_client=client_obj, short_name=form.cleaned_data["short_name"]).exists():
                 messages.error(request, "考區簡稱重複！！請重新輸入")
                 return redirect(f"/contest/create/?server_client_id={server_client_id}")
             
@@ -485,6 +483,9 @@ def contest_select_problem_edit_view(request, id, cid):
     old_problem_information = problem_crawler.get_contest_or_problem_information(
         contest_id=cid, need_content="problem"
     )
+
+    print("problem_information:", problem_information)
+    print("old_problem_information:", old_problem_information)
 
     # Add old problem information to new problem
     problem_information, selected_problem = contest_problem_information_update_process(

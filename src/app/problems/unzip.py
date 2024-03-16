@@ -1,6 +1,8 @@
 import zipfile
 
+from django.db import IntegrityError, transaction
 from django.core.files.base import ContentFile
+from django.contrib import messages
 
 from app.users.models import User 
 from app.problems.models import Problem
@@ -55,13 +57,13 @@ def handle_upload_required_file(file):
             return file_info_dict
 
     except Exception:
-        raise problem_exceptions.ContestCopyException(
+        raise problem_exceptions.ProblemUnZipUploadRequiredFileException(
             "File formatting errors!"
         )
         
     
 
-def handle_unzip_problem_obj(file_info_dict):
+def handle_unzip_problem_obj(request, file_info_dict):
     """
     Handles the unzipping of a problem object.
 
@@ -71,9 +73,9 @@ def handle_unzip_problem_obj(file_info_dict):
     Returns:
         problem_obj: The created Problem object.
     """
-    problem_obj = create_unzip_problem_obj(file_info_dict)
-    format_data = handle_unzip_probleminout_data_format(file_info_dict)
-    create_unzip_probleminout_obj(format_data, problem_obj)
+    problem_obj = create_unzip_problem_obj(request, file_info_dict)
+    format_data = handle_unzip_probleminout_data_format(request, file_info_dict)
+    create_unzip_probleminout_obj(request, format_data, problem_obj)
 
     return problem_obj
     
@@ -99,7 +101,7 @@ def create_problem_pdf(file_info_dict):
     return pdf_file
 
 
-def create_unzip_problem_obj(file_info_dict):
+def create_unzip_problem_obj(request, file_info_dict):
     """
     Create and return a Problem object based on the provided file information dictionary.
 
@@ -110,18 +112,22 @@ def create_unzip_problem_obj(file_info_dict):
         Problem: The created Problem object.
 
     """
-    pdf_file = create_problem_pdf(file_info_dict)
-    problem_obj = Problem.objects.create(
-        name=file_info_dict["problem_title"],
-        description_file=pdf_file,
-        time_limit=file_info_dict["time_limit"],
-        owner=User.objects.get(username="admin"),
-        is_processed=True,
-    )
-    return problem_obj
+    try:
+        pdf_file = create_problem_pdf(file_info_dict)
+        problem_obj = Problem.objects.create(
+            name=file_info_dict["problem_title"],
+            description_file=pdf_file,
+            time_limit=file_info_dict["time_limit"],
+            owner=User.objects.get(username="admin"),
+            is_processed=True,
+        )
+        return problem_obj
+    except IntegrityError as e:
+        messages.error(request, "題目創建失敗！")
+        raise problem_exceptions.ProblemUnZipCreateException(e)
 
 
-def create_unzip_probleminout_obj(format_data, problem_obj):
+def create_unzip_probleminout_obj(request, format_data, problem_obj):
     """
     Create ProblemInOut objects based on the given format_data and problem_obj.
 
@@ -132,16 +138,19 @@ def create_unzip_probleminout_obj(format_data, problem_obj):
     Returns:
         None
     """
-    for key, value in format_data.items():
-        ProblemInOut.objects.create(
-            problem=problem_obj,
-            is_sample=True if value["state"] == "sample" else False,
-            input_content=value["in"],
-            answer_content=value["ans"],
-        )
+    try:
+        for key, value in format_data.items():
+            ProblemInOut.objects.create(
+                problem=problem_obj,
+                is_sample=True if value["state"] == "sample" else False,
+                input_content=value["in"],
+                answer_content=value["ans"],
+            )
+    except IntegrityError as e:
+        messages.error(request, "ProblemInOut創建失敗！")
+        raise problem_exceptions.ProblemUnZipInOutCreateException(e)
 
-
-def handle_unzip_probleminout_data_format(file_info_dict):
+def handle_unzip_probleminout_data_format(request, file_info_dict):
     """
     Formats the testcase data obtained from the file_info_dict dictionary.
 
@@ -152,29 +161,33 @@ def handle_unzip_probleminout_data_format(file_info_dict):
         dict: A formatted dictionary containing the testcase data.
 
     """
-    testcase_data = file_info_dict["testcases_data"]
-    formatted_data = dict()
+    try:
+        testcase_data = file_info_dict["testcases_data"]
+        formatted_data = dict()
 
-    for filename, file_data in testcase_data.items():
-        file_name, file_extension = filename.split(".")
-        file_name = file_name.split("/")
-        file_state, file_name = file_name[-2], file_name[-1]
-        file_key = f"{file_state}/{file_name}"
+        for filename, file_data in testcase_data.items():
+            file_name, file_extension = filename.split(".")
+            file_name = file_name.split("/")
+            file_state, file_name = file_name[-2], file_name[-1]
+            file_key = f"{file_state}/{file_name}"
 
-        if file_key not in formatted_data:
-            formatted_data[file_key] = {"state": file_state, "in": None, "ans": None}
-            
-            if file_extension == "in":
-                formatted_data[file_key]["in"] = file_data
-            
-            if file_extension == "ans":
-                formatted_data[file_key]["ans"] = file_data
+            if file_key not in formatted_data:
+                formatted_data[file_key] = {"state": file_state, "in": None, "ans": None}
+                
+                if file_extension == "in":
+                    formatted_data[file_key]["in"] = file_data
+                
+                if file_extension == "ans":
+                    formatted_data[file_key]["ans"] = file_data
 
-        else:
-            if file_extension == "in":
-                formatted_data[file_key]["in"] = file_data
-            
-            if file_extension == "ans":
-                formatted_data[file_key]["ans"] = file_data
+            else:
+                if file_extension == "in":
+                    formatted_data[file_key]["in"] = file_data
+                
+                if file_extension == "ans":
+                    formatted_data[file_key]["ans"] = file_data
 
-    return formatted_data
+        return formatted_data
+    except Exception as e:
+        messages.error(request, "題目測資格式錯誤！")
+        raise problem_exceptions.ProblemUnZipInOutFormatException(e)

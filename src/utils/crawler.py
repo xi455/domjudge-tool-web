@@ -63,7 +63,6 @@ class ProblemPath(str, Enum):
 class ConTestPath(str, Enum):
     GET = "/jury/contests"
     GET_PROBLEM = "/jury/contests/{}"
-    GET_SINGLE = "/jury/contests/{}"
     GET_SINGLE_EDIT = "/jury/contests/{}/edit"
     POST = "/jury/contests/add"
     POST_SINGLE = "/jury/contests/{}/edit"
@@ -111,7 +110,7 @@ class ProblemCrawler:
 
         raise problems_exceptions.ProblemDownloaderLoginException("登入失敗")
 
-    def misjudgment(self, soup):
+    def misjudgment(self, page):
         """
         Determine whether there are upload errors.
 
@@ -121,8 +120,10 @@ class ProblemCrawler:
         Returns:
             bool: True if there are no upload errors, False otherwise.
         """
+        soup = BeautifulSoup(page.text, "html.parser")
+
         error_elements = soup.select_one(".form-error-message")
-        if error_elements:
+        if error_elements and page.status_code != 200:
             return False
         else:
             return True
@@ -258,8 +259,8 @@ class ProblemCrawler:
         )
         if not is_valid:
             repeat_name = ", ".join(repeat_name_list)
-            message = f"上傳失敗！！{repeat_name} 題目名稱重複。"
-            return False, {}, contest_id, message
+            messages.error(f"上傳失敗！！{repeat_name} 題目名稱重複。")
+            return False, {}, contest_id
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
         soup = BeautifulSoup(page.text, "html.parser")
@@ -269,8 +270,8 @@ class ProblemCrawler:
         if "alert-info" in alert:
             is_succeed = True
         else:
-            message = "題目上傳失敗！！"
-            return False, {}, contest_id, message
+            messages.error("題目上傳失敗！！")
+            return False, {}, contest_id
 
         result_problems_info_dict = dict()
         problems_dict = self.get_problems()
@@ -279,8 +280,8 @@ class ProblemCrawler:
             if name in problems_key:
                 result_problems_info_dict[name] = problems_dict[name].id
 
-        message = "題目上傳成功！！"
-        return is_succeed, result_problems_info_dict, contest_id, message
+        messages.success("題目上傳成功！！")
+        return is_succeed, result_problems_info_dict, contest_id
 
     def problem_format_process(self, problem_data):
         problem_information = dict()
@@ -339,6 +340,7 @@ class ProblemCrawler:
         page = self.session.get(
             self.url + ConTestPath.GET_SINGLE_EDIT.format(contest_id)
         )
+        
         soup = BeautifulSoup(page.text, "html.parser")
         thead_elements = soup.select(".table thead")
 
@@ -348,7 +350,6 @@ class ProblemCrawler:
 
         if tbody:
             tr_elements_length = len(tbody.select("tr"))
-
             return tr_elements_length
 
         return 0
@@ -404,9 +405,31 @@ class ProblemCrawler:
             headers=headers,
         )
 
-        soup = BeautifulSoup(page.text, "html.parser")
+        return self.misjudgment(page)
 
-        return self.misjudgment(soup=soup)
+    def get_contest_problems_info(self, contest_id):
+
+        problem_count = self.get_contest_problem_count(contest_id)
+        if problem_count <= 0:
+            return list()
+        page = self.session.get(
+            self.url + ConTestPath.GET_PROBLEM.format(contest_id)
+        )
+
+        soup = BeautifulSoup(page.text, "html.parser")
+        table_element = soup.select("table")[1]
+        tr_elements = table_element.select("tr")
+
+        problem_data = list()
+        for tr_element in tr_elements[1:]:
+            td_elements = tr_element.select("td")
+            problem_data.append({
+                "id": td_elements[0].text.strip().replace("p", ""),
+                "name": td_elements[1].text.strip() if td_elements[1].text.strip() == td_elements[2].text.strip() else td_elements[2].text.strip(),
+            })
+        
+        return problem_data
+
 
     def get_contest_or_problem_information(self, contest_id, need_content=None):
 
@@ -463,13 +486,18 @@ class ProblemCrawler:
 
     def contest_problem_upload(self, contest_id, problem_data):
 
+        if "contest[teams][]" in problem_data:
+            del problem_data["contest[teams][]"]
+        
+        if "contest[teamCategories][]" in problem_data:
+            del problem_data["contest[teamCategories][]"]
+
         page = self.session.post(
             self.url + ConTestPath.POST_SINGLE.format(contest_id),
             data=problem_data,
         )
 
-        soup = BeautifulSoup(page.text, "html.parser")
-        return self.misjudgment(soup=soup)
+        return self.misjudgment(page)
 
     def get_testcases_all(self, problem_id):
         page = self.session.get(self.url + TestCasePath.GET.format(problem_id))
@@ -534,8 +562,14 @@ class ProblemCrawler:
         if page.status_code == 200:
             return True
 
-    def delete_problem(self, id):
-        self.session.post(self.url + ProblemPath.DELETE.format(id))
+    def delete_problem(self, request, id):
+        page = self.session.post(self.url + ProblemPath.DELETE.format(id))
+        result = self.misjudgment(page)
+
+        if result:
+            return messages.success(request, "刪除成功")
+        else:
+            return messages.error(request, "刪除失敗")
 
     def delete_contest_problem(self, contest_id, web_problem_id):
         page = self.session.post(

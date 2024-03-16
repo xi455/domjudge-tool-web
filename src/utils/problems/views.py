@@ -1,8 +1,28 @@
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 
+from app.problems import exceptions as problem_exceptions
 from app.problems.models import Problem, ProblemServerLog
 from app.problems.services.importer import build_zip_response
 
+from utils import exceptions as utils_exceptions
+
+def handle_problem_upload_format(problem_obj):
+    try:
+        response_zip = build_zip_response(problem_obj)
+        problem_zip = b"".join(response_zip.streaming_content)
+
+        upload_file_info = (
+            "problem_upload_multiple[archives][]",
+            (problem_obj.name, problem_zip, "application/zip"),
+        )
+
+        return upload_file_info
+    
+    except Exception:
+        raise utils_exceptions.CrawlerProblemUploadFormatException(
+            "Problem upload format error!"
+        )
 
 def handle_problems_upload_info(problem_data):
     """
@@ -23,22 +43,16 @@ def handle_problems_upload_info(problem_data):
     owner_obj = problem_data.get("owner_obj")
     contest_obj = problem_data.get("contest_obj")
     server_client = problem_data.get("server_client")
+
     problem_id_list = problem_data.get("problem_id_list")
 
     problems_upload_info = list()
     problems_obj_dict = dict()
 
     for id in problem_id_list:
+        
         problem_obj = get_object_or_404(Problem, pk=id)
-        response_zip = build_zip_response(problem_obj)
-        problem_zip = b"".join(response_zip.streaming_content)
-
-        upload_file_info = (
-            "problem_upload_multiple[archives][]",
-            (problem_obj.name, problem_zip, "application/zip"),
-        )
-
-        problems_upload_info.append(upload_file_info)
+        problems_upload_info.append(handle_problem_upload_format(problem_obj))
 
         problems_obj_dict[problem_obj.name] = {
             "owner": owner_obj,
@@ -61,16 +75,22 @@ def create_problem_log(problems_obj_data_dict):
     Returns:
         None
     """
-    objs_list = list()
-    for value in problems_obj_data_dict.values():
-        create_problem_log_obj = ProblemServerLog(
-            owner=value.get("owner"),
-            problem=value.get("problem"),
-            server_client=value.get("server_client"),
-            web_problem_id=value.get("web_problem_id"),
-            contest=value.get("contest"),
-            web_problem_state=value.get("web_problem_state"),
-        )
-        objs_list.append(create_problem_log_obj)
+    try:
+        objs_list = list()
+        for value in problems_obj_data_dict.values():
+            create_problem_log_obj = ProblemServerLog(
+                owner=value.get("owner"),
+                problem=value.get("problem"),
+                server_client=value.get("server_client"),
+                web_problem_id=value.get("web_problem_id"),
+                contest=value.get("contest"),
+                web_problem_state=value.get("web_problem_state"),
+            )
+            objs_list.append(create_problem_log_obj)
 
-    ProblemServerLog.objects.bulk_create(objs_list)
+        ProblemServerLog.objects.bulk_create(objs_list)
+        
+    except IntegrityError:
+        raise problem_exceptions.ProblemCreateLogException(
+            "Problem log creation error!"
+        )

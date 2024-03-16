@@ -465,6 +465,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             problem_crawler = create_problem_crawler(server_client=server_client_obj)
 
             for problem_log_obj in problem_log_obj_list:
-                problem_crawler.delete_problem(id=problem_log_obj.web_problem_id)
+                problem_crawler.delete_problem(request=request, id=problem_log_obj.web_problem_id)
 
     updown_selected_problem.short_description = "撤銷所選的 題目"

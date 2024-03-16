@@ -18,7 +18,7 @@ def validate_problem_name(value):
 
 
 class Problem(BaseModel):
-    name = models.CharField("題目名稱", max_length=255, validators=[validate_problem_name])
+    name = models.CharField("題目名稱", max_length=255, validators=[validate_problem_name], unique=True)
     # short_name = models.CharField("題目代號", max_length=50, help_text="ex: p01")
     description_file = models.FileField(
         "題目說明檔",
