@@ -10,9 +10,5 @@ class CrawlerGetContestCidException(Exception):
     pass
 
 
-class CrawlerHandleContestShortNameException(Exception):
-    pass
-
-
 class CrawlerRemoveContestOldProblemsException(Exception):
     pass

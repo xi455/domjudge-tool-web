@@ -1,4 +1,6 @@
 import json
+from django.db import IntegrityError
+from django.contrib import messages
 
 from app.users.models import User
 from app.problems.models import Problem
@@ -6,6 +8,9 @@ from app.problems.models import ProblemServerLog
 
 from utils.admins import create_problem_crawler
 from utils.problems.views import create_problem_log
+
+from app.domservers import exceptions as domserver_exceptions
+from utils import exceptions as utils_exceptions
 
 
 def create_contest_record(request, form, client_obj, problem_crawler):
@@ -21,12 +26,16 @@ def create_contest_record(request, form, client_obj, problem_crawler):
     Returns:
         None
     """
-    form.instance.owner = User.objects.get(username=request.user.username)
-    form.instance.server_client = client_obj
-    form.instance.cid = problem_crawler.get_contest_name_cid(
-        contest_shortname=form.instance.short_name
-    )
-    form.save()
+    try:
+        form.instance.owner = User.objects.get(username=request.user.username)
+        form.instance.server_client = client_obj
+        form.instance.cid = problem_crawler.get_contest_name_cid(
+            contest_shortname=form.instance.short_name
+        )
+        form.save()
+    except IntegrityError as e:
+        messages.error(request, "考區創建失敗！")
+        raise domserver_exceptions.ContestCreateException(e)
 
 
 def get_problem_log_web_id_list(cid, problem_crawler):
@@ -97,7 +106,7 @@ def create_problem_log_format_and_record(
                 }
             }
         )
-    create_problem_log(problems_obj_data_dict=problems_obj_data_dict)
+    create_problem_log(request=request, problems_obj_data_dict=problems_obj_data_dict)
 
 def update_problem_log_state(request, state, client_obj, contest_obj):
     """
@@ -157,3 +166,39 @@ def handle_problem_log(form_data, request, client_obj, contest_obj):
     create_problem_log_format_and_record(
         request, client_obj, contest_obj, problem_info_dict
     )
+
+
+def old_problem_info_remove_process(request, problem_crawler, cid):
+    """
+    Remove old problem information from the contest.
+
+    Args:
+        problem_crawler (ProblemCrawler): The problem crawler object.
+        cid (str): The contest ID.
+
+    Raises:
+        CrawlerRemoveContestOldProblemsException: If an error occurs while removing old problem information.
+
+    """
+    try:
+        old_problem_information = problem_crawler.get_contest_or_problem_information(
+            contest_id=cid, need_content="problem"
+        )
+
+        problem_need_delete = old_problem_information
+
+        if problem_need_delete:
+            problem_need_delete_id = [
+                value
+                for key, value in problem_need_delete.items()
+                if "[problem]" in key
+            ]
+
+            for problem_id in problem_need_delete_id:
+                problem_crawler.delete_contest_problem(
+                    contest_id=cid, web_problem_id=problem_id
+                )
+
+    except Exception as e:
+        messages.error(request, "移除舊題目資訊時發現錯誤")
+        raise utils_exceptions.CrawlerRemoveContestOldProblemsException(e)

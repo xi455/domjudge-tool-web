@@ -1,13 +1,14 @@
 from django.db import IntegrityError
+from django.contrib import messages
 from django.shortcuts import get_object_or_404
 
-from app.problems import exceptions as problem_exceptions
 from app.problems.models import Problem, ProblemServerLog
 from app.problems.services.importer import build_zip_response
 
 from utils import exceptions as utils_exceptions
+from app.problems import exceptions as problem_exceptions
 
-def handle_problem_upload_format(problem_obj):
+def handle_problem_upload_format(request, problem_obj):
     try:
         response_zip = build_zip_response(problem_obj)
         problem_zip = b"".join(response_zip.streaming_content)
@@ -19,12 +20,11 @@ def handle_problem_upload_format(problem_obj):
 
         return upload_file_info
     
-    except Exception:
-        raise utils_exceptions.CrawlerProblemUploadFormatException(
-            "Problem upload format error!"
-        )
+    except Exception as e:
+        messages.error(request, "題目上傳格式錯誤!")
+        raise utils_exceptions.CrawlerProblemUploadFormatException(e)
 
-def handle_problems_upload_info(problem_data):
+def handle_problems_upload_info(request, problem_data):
     """
     Handle problems upload information.
 
@@ -52,7 +52,7 @@ def handle_problems_upload_info(problem_data):
     for id in problem_id_list:
         
         problem_obj = get_object_or_404(Problem, pk=id)
-        problems_upload_info.append(handle_problem_upload_format(problem_obj))
+        problems_upload_info.append(handle_problem_upload_format(request, problem_obj))
 
         problems_obj_dict[problem_obj.name] = {
             "owner": owner_obj,
@@ -65,7 +65,7 @@ def handle_problems_upload_info(problem_data):
     return problems_upload_info, problems_obj_dict
 
 
-def create_problem_log(problems_obj_data_dict):
+def create_problem_log(request, problems_obj_data_dict):
     """
     Create problem logs based on the given dictionary of problem data.
 
@@ -90,7 +90,6 @@ def create_problem_log(problems_obj_data_dict):
 
         ProblemServerLog.objects.bulk_create(objs_list)
         
-    except IntegrityError:
-        raise problem_exceptions.ProblemCreateLogException(
-            "Problem log creation error!"
-        )
+    except IntegrityError as e:
+        messages.error(request, "題目紀錄創建失敗!")
+        raise problem_exceptions.ProblemCreateLogException(e)

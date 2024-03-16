@@ -18,16 +18,16 @@ from django.shortcuts import redirect
 from django.urls import include, path
 from django.views.generic import RedirectView
 
-from app.domservers.views import (
+from app.domservers.views.allocate import (
     contest_create_view,
     contest_information_edit_view,
-    contest_problem_copy_view,
+    contest_copy_view,
     contest_problem_shortname_create_view,
     contest_problem_shortname_edit_view,
     contest_problem_upload_view,
     contest_select_problem_edit_view,
 )
-from app.problems.views import (
+from app.problems.views.allocate import (
     get_contests_info_and_problem_info_api,
     problem_contest_view,
     problem_upload_view,
@@ -86,7 +86,7 @@ urlpatterns = [
     ),
     path(
         "contest/<id>/<contest_id>/<cid>/copy/",
-        contest_problem_copy_view,
+        contest_copy_view,
         name="contest_information_copy",
     ),
     path("", RedirectView.as_view(pattern_name="admin:index")),

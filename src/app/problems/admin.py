@@ -285,6 +285,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         problem_files = {"problem[problemtextFile]": obj.description_file}
 
+        result_bool = True
         newest_problem_log = get_newest_problems_log(obj=obj)
         for problem_log_obj in newest_problem_log:
             server_client = problem_log_obj.server_client
@@ -296,16 +297,14 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                 id=problem_log_obj.web_problem_id,
             )
 
-            if is_success:
-                messages.success(
-                    request,
-                    f'{problem_log_obj.server_client.name} "{problem_log_obj.problem}" 更新成功！！',
-                )
-            else:
+            if not is_success:
+                result_bool = False
                 messages.error(
                     request,
                     f'{problem_log_obj.server_client.name} "{problem_log_obj.problem}" 更新錯誤！！',
                 )
+        if result_bool:
+            messages.success(request, "題目資訊更新成功！！")
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)

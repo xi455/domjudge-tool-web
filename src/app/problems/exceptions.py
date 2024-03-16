@@ -34,3 +34,11 @@ class ProblemUnZipInOutCreateException(ProblemUnZipException):
 
 class ProblemUnZipCreateException(ProblemUnZipException):
     pass
+
+
+class ProblemReplaceException(Exception):
+    pass
+
+
+class ProblemReplaceUpdateLogException(ProblemReplaceException):
+    pass

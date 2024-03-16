@@ -259,8 +259,8 @@ class ProblemCrawler:
         )
         if not is_valid:
             repeat_name = ", ".join(repeat_name_list)
-            messages.error(f"上傳失敗！！{repeat_name} 題目名稱重複。")
-            return False, {}, contest_id
+            message = f"上傳失敗！！{repeat_name} 題目名稱重複。"
+            return False, {}, contest_id, message
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
         soup = BeautifulSoup(page.text, "html.parser")
@@ -270,8 +270,8 @@ class ProblemCrawler:
         if "alert-info" in alert:
             is_succeed = True
         else:
-            messages.error("題目上傳失敗！！")
-            return False, {}, contest_id
+            message = "題目上傳失敗！！"
+            return False, {}, contest_id, message
 
         result_problems_info_dict = dict()
         problems_dict = self.get_problems()
@@ -280,8 +280,7 @@ class ProblemCrawler:
             if name in problems_key:
                 result_problems_info_dict[name] = problems_dict[name].id
 
-        messages.success("題目上傳成功！！")
-        return is_succeed, result_problems_info_dict, contest_id
+        return is_succeed, result_problems_info_dict, contest_id, None
 
     def problem_format_process(self, problem_data):
         problem_information = dict()
@@ -391,6 +390,9 @@ class ProblemCrawler:
         # return the bool to see if it succeeded.
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+        if "contest[save]" not in create_contest_information:
+            create_contest_information.update({"contest[save]": ""})
 
         if (
             ("contest[teams][]") in create_contest_information
@@ -559,8 +561,9 @@ class ProblemCrawler:
         page = self.session.post(
             self.url + ProblemPath.EDIT.format(id), data=data, files=files
         )
-        if page.status_code == 200:
-            return True
+
+        return self.misjudgment(page)
+        
 
     def delete_problem(self, request, id):
         page = self.session.post(self.url + ProblemPath.DELETE.format(id))
