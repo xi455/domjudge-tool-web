@@ -118,12 +118,15 @@ def create_unzip_problem_obj(request, file_info_dict):
             name=file_info_dict["problem_title"],
             description_file=pdf_file,
             time_limit=file_info_dict["time_limit"],
-            owner=User.objects.get(username="admin"),
+            owner=User.objects.get(username=request.user),
             is_processed=True,
         )
         return problem_obj
     except IntegrityError as e:
-        messages.error(request, "題目創建失敗！")
+        if "UNIQUE constraint failed" in str(e):
+            messages.error(request, "題目名稱已經存在！")
+        else:
+            messages.error(request, "題目創建/上傳失敗！")
         raise problem_exceptions.ProblemUnZipCreateException(e)
 
 

@@ -458,8 +458,6 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             # ## 新增
             ProblemServerLog.objects.bulk_create(upload_server_log_obj_list)
 
-        print(problem_del_info_dict)
-        # ------------------------------------------------------------
         for server_client_obj, problem_log_obj_list in problem_del_info_dict.items():
             problem_crawler = create_problem_crawler(server_client=server_client_obj)
 

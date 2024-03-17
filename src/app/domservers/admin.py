@@ -94,8 +94,4 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
             "available_apps": get_available_apps(request),  # 獲取 sidebar 所有應用
         }
 
-        # obj = DomServerClient.objects.all().first()
-        # problem_crawler = create_problem_crawler(obj)
-        # problem_crawler.get_contest_problems_detail_info("2")
-
         return render(request, "contest_list.html", context)

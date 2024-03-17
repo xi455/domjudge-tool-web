@@ -10,8 +10,9 @@ from bs4 import BeautifulSoup
 from django.contrib import messages
 from pydantic import BaseModel, validator
 
-import app.problems.exceptions as problems_exceptions
+from utils.views import get_str_to_unicode
 
+from app.problems import exceptions as problems_exceptions
 from utils import exceptions as utils_exceptions
 
 
@@ -251,8 +252,12 @@ class ProblemCrawler:
         }
 
         problem_name_list = []
-        for file_name in files:
-            problem_name_list.append(file_name[1][0])
+        for index in range(len(files)):
+            problem_name_list.append(files[index][1][0])
+            str_to_unicode = get_str_to_unicode(files[index][1][0])
+            files[index] = [_ for _ in files[index]]
+            files[index][1] = [_ for _ in files[index][1]]
+            files[index][1][0] = str_to_unicode
 
         is_valid, repeat_name_list = self.validate_problem_name_repeat(
             problem_name_list
@@ -263,11 +268,9 @@ class ProblemCrawler:
             return False, {}, contest_id, message
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
-        soup = BeautifulSoup(page.text, "html.parser")
-
-        alert = soup.select_one(".alert-dismissible").get("class")
-
-        if "alert-info" in alert:
+        result = self.misjudgment(page)
+        
+        if result:
             is_succeed = True
         else:
             message = "題目上傳失敗！！"

@@ -1,9 +1,3 @@
-class ProblemException(Exception):
-    pass
-
-class ProblemCreateLogException(ProblemException):
-    pass
-
 class ProblemDownloaderException(Exception):
     pass
 
@@ -16,11 +10,23 @@ class ProblemDownloaderDownloadFailException(ProblemDownloaderException):
     pass
 
 
+class ProblemCreateLogException(Exception):
+    pass
+
+
+class ProblemUploadException(Exception):
+    pass
+
+
 class ProblemUnZipException(Exception):
     pass
 
 
 class ProblemUnZipUploadRequiredFileException(ProblemUnZipException):
+    pass
+
+
+class ProblemUnZipFormatException(ProblemUnZipException):
     pass
 
 

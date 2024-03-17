@@ -21,6 +21,7 @@ from app.problems.views.unzip import handle_upload_required_file, handle_unzip_p
 from app.problems.services.importer import build_zip_response
 from app.problems.views.replace_problems import update_dj_contest_info_for_replace_problem
 
+from app.problems import exceptions as problem_exceptions
 
 @require_GET
 @login_required(login_url="/admin/login/")
@@ -64,6 +65,9 @@ def upload_zip_view(request, pk=None):
                 problem.delete() 
 
         except Exception as e:
+            if not messages.get_messages(request):
+                messages.error(request, "題目上傳失敗！！請刪除上傳的替換題目")
+
             print(f"{type(e).__name__}:", e)
             return redirect("/admin/problems/problem/")
             
@@ -115,7 +119,7 @@ def problem_upload_view(request):
 
         if not is_success:
             messages.error(request, message)
-            return redirect("/admin/problems/problem/")
+            raise problem_exceptions.ProblemUploadException("Error to upload Problem!!")
 
         for pname, pid in problems_info_dict.items():
             problems_obj_data_dict[pname].update({"web_problem_id": pid})

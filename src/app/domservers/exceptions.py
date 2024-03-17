@@ -6,6 +6,10 @@ class ContestCreateException(Exception):
     pass
 
 
+class ContestUpdateException(Exception):
+    pass
+
+
 class ContestCopyException(Exception):
     pass
 

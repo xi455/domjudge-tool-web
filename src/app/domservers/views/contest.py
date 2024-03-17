@@ -1,8 +1,12 @@
 import json
 
+from django.db import IntegrityError
+from django.contrib import messages
+
 from app.users.models import User
 from app.problems.models import ProblemServerLog
 from app.domservers.models.dom_server import DomServerContest
+from app.domservers import exceptions as domserver_exceptions
 
 from utils.domserver.views import create_problem_log_format_and_record
 
@@ -84,7 +88,7 @@ def filter_contest_selected_problem(request, client_obj):
     return problem_log_objs_list
 
 
-def create_copy_contest_record(contest_shortname_rename, contest_obj, problem_crawler):
+def create_copy_contest_record(request, contest_shortname_rename, contest_obj, problem_crawler):
     """
     Create a copy of a contest record with the given contest shortname rename.
 
@@ -99,27 +103,31 @@ def create_copy_contest_record(contest_shortname_rename, contest_obj, problem_cr
     # Get the new contest area id
     cid = problem_crawler.get_contest_name_cid(contest_shortname_rename)
 
-    new_contest_obj = DomServerContest.objects.create(
-        owner=contest_obj.owner,
-        server_client=contest_obj.server_client,
-        cid=cid,
-        name=contest_obj.name,
-        short_name=contest_shortname_rename,
-        start_time=contest_obj.start_time,
-        end_time=contest_obj.end_time,
-        activate_time=contest_obj.activate_time,
-        scoreboard_freeze_length=contest_obj.scoreboard_freeze_length,
-        scoreboard_unfreeze_time=contest_obj.scoreboard_unfreeze_time,
-        deactivate_time=contest_obj.deactivate_time,
-        start_time_enabled=contest_obj.start_time_enabled,
-        process_balloons=contest_obj.process_balloons,
-        open_to_all_teams=contest_obj.open_to_all_teams,
-        contest_visible_on_public_scoreboard=contest_obj.contest_visible_on_public_scoreboard,
-        enabled=contest_obj.enabled,
-    )
+    try:
+        new_contest_obj = DomServerContest.objects.create(
+            owner=contest_obj.owner,
+            server_client=contest_obj.server_client,
+            cid=cid,
+            name=contest_obj.name,
+            short_name=contest_shortname_rename,
+            start_time=contest_obj.start_time,
+            end_time=contest_obj.end_time,
+            activate_time=contest_obj.activate_time,
+            scoreboard_freeze_length=contest_obj.scoreboard_freeze_length,
+            scoreboard_unfreeze_time=contest_obj.scoreboard_unfreeze_time,
+            deactivate_time=contest_obj.deactivate_time,
+            start_time_enabled=contest_obj.start_time_enabled,
+            process_balloons=contest_obj.process_balloons,
+            open_to_all_teams=contest_obj.open_to_all_teams,
+            contest_visible_on_public_scoreboard=contest_obj.contest_visible_on_public_scoreboard,
+            enabled=contest_obj.enabled,
+        )
 
-    return new_contest_obj
-
+        return new_contest_obj
+    except IntegrityError as e:
+        messages.error(request, "考區創建失敗！")
+        raise domserver_exceptions.ContestCreateException(e)
+    
 
 def get_copy_problem_log_and_upload_process(request, problem_logs, client_obj, new_contest_obj):
     """
