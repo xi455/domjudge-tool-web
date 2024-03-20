@@ -33,8 +33,8 @@ class Problem(BaseModel):
         related_name="problems",
         verbose_name="擁有者",
     )
-    is_processed = models.BooleanField("是否上傳", default=False)
-    web_problem_id = models.CharField("網站題目ID", max_length=68, blank=True, null=True)
+    # is_processed = models.BooleanField("是否上傳", default=False)
+    # web_problem_id = models.CharField("網站題目ID", max_length=68, blank=True, null=True)
 
     def delete(self, using=None, keep_parents=False):
         pdf_path = self.description_file.path

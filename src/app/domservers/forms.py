@@ -61,13 +61,6 @@ class DomServerContestForm(forms.ModelForm):
     )
     short_name = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
-        validators=[
-            RegexValidator(
-                regex="^[a-zA-Z0-9_-]+$",
-                message="只允許使用字母、數字、_和-。",
-                code="invalid_short_name",
-            )
-        ],
     )
     start_time = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
@@ -135,6 +128,24 @@ class DomServerContestForm(forms.ModelForm):
         ),
         required=False,
     )
+
+    def clean_name(self):
+        name = self.cleaned_data.get("name")
+        if not re.match("^[a-zA-Z0-9\s+_-]+$", name):
+            raise forms.ValidationError(
+                ("只允許使用字母、數字、_和-。"),
+                code="invalid",
+            )
+        return name
+    
+    def clean_short_name(self):
+        short_name = self.cleaned_data.get("short_name")
+        if not re.match("^[a-zA-Z0-9_-]+$", short_name):
+            raise forms.ValidationError(
+                ("只允許使用字母、數字、_和-。"),
+                code="invalid",
+            )
+        return short_name
 
     def clean_start_time(self):
         start_time = self.cleaned_data.get("start_time")

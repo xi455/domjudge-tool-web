@@ -31,7 +31,7 @@ class ProblemInOutInline(admin.TabularInline):
 
 
 @admin.register(ProblemServerLog)
-class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
+class ProblemServerLogAdmin(DjangoObjectActions, admin.ModelAdmin):
     list_display = (
         "owner",
         "problem",
@@ -40,6 +40,9 @@ class DomserverAdmin(DjangoObjectActions, admin.ModelAdmin):
         "contest",
         "web_problem_state",
     )
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
 
 
 @admin.register(Problem)
@@ -359,7 +362,12 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             data = DomServerContest.objects.filter(
                 owner=request.user, server_client=first_server_object
             )
+            
         contest_name = [(obj.short_name, obj.cid) for obj in data]
+
+        if not request.user.is_superuser:
+            demo_contest = DomServerContest.objects.filter(server_client=first_server_object, short_name="demo").first()
+            contest_name.insert(0, (demo_contest.short_name, demo_contest.cid))
 
         problem_info = upload_problem_info_process(
             queryset=queryset, server_object=first_server_object

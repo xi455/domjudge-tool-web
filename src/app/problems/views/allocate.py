@@ -44,17 +44,17 @@ def upload_zip_view(request, pk=None):
             if pk is None:
                 for file in files:
                     # Get required file information
-                    file_info_dict = handle_upload_required_file(file)
+                    file_info_obj = handle_upload_required_file(file)
                 
                     # Create problem object and problem in/out object
-                    handle_unzip_problem_obj(request, file_info_dict)
+                    handle_unzip_problem_obj(request, file_info_obj)
 
             if pk is not None:
                 # files[0] is the first file in the list
-                file_info_dict = handle_upload_required_file(files[0])
+                file_info_obj = handle_upload_required_file(files[0])
 
                 # Create problem object and problem in/out object
-                new_problem_obj = handle_unzip_problem_obj(request, file_info_dict)
+                new_problem_obj = handle_unzip_problem_obj(request, file_info_obj)
 
                 problem = get_object_or_404(Problem, pk=pk)
                 problem_log_objs = problem.problem_log.all()
@@ -212,8 +212,8 @@ def get_contests_info_and_problem_info_api(request):
             queryset=queryset, server_object=server_object
         )
 
-        contest_name = form.cleaned_data.get("name", None)
-        serverclient = get_object_or_404(DomServerClient, name=contest_name)
+        server_name = form.cleaned_data.get("name", None)
+        serverclient = get_object_or_404(DomServerClient, name=server_name)
 
         if request.user.is_superuser:
             server_contests_info_dict = DomServerContest.objects.filter(
@@ -224,9 +224,19 @@ def get_contests_info_and_problem_info_api(request):
                 owner=request.user, server_client=serverclient
             )
 
-        contests_data = {
+        contests_data_dict = {
             obj.short_name: obj.cid for obj in server_contests_info_dict
         }
+
+        if not request.user.is_superuser:
+            demo_contest = DomServerContest.objects.filter(
+                server_client=serverclient, short_name="demo"
+            ).first()
+
+            contests_data = {demo_contest.short_name: demo_contest.cid}
+            contests_data.update(contests_data_dict)
+        else:
+            contests_data = contests_data_dict
 
         response_data = {
             "contests_data": contests_data,

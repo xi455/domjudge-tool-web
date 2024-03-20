@@ -10,6 +10,28 @@ from app.problems.models import ProblemInOut
 
 from app.problems import exceptions as problem_exceptions
 
+from pydantic import BaseModel, validator, Field
+from typing import Optional
+import base64
+
+class UnZipFileProblemInfo(BaseModel):
+    problem_title: str
+    time_limit: float
+    problem_pdf: Optional[bytes] = Field(None, description="The Unzip file problem pdf")
+    testcases_data: dict
+
+    @validator("problem_pdf")
+    def validate_pdf(cls, value):
+        try:
+            if not value.startswith(b'%PDF-'):
+                raise ValueError("Invalid PDF file")
+            
+            return value
+        
+        except Exception as e:
+            raise ValueError(e)
+        
+
 def handle_upload_required_file(file):
     """
     Extracts information from a zip file and returns a dictionary containing the extracted data.
@@ -46,46 +68,44 @@ def handle_upload_required_file(file):
 
                 if filename == "problem.pdf":
                     file_data = zip_ref.read(filename)
-                    file_info_dict["problem_pdf"] = file_data                
+                    file_info_dict["problem_pdf"] = file_data             
 
                 if filename.endswith(".ans") or filename.endswith(".in"):
                     file_data = zip_ref.read(filename).decode("utf-8")
                     testcase_data[filename] = file_data
 
             file_info_dict["testcases_data"] = testcase_data
-            
-            return file_info_dict
+            file_info_obj = UnZipFileProblemInfo(**file_info_dict)
+            return file_info_obj
 
-    except Exception:
-        raise problem_exceptions.ProblemUnZipUploadRequiredFileException(
-            "File formatting errors!"
-        )
+    except Exception as e:
+        raise problem_exceptions.ProblemUnZipUploadRequiredFileException(e)
         
     
 
-def handle_unzip_problem_obj(request, file_info_dict):
+def handle_unzip_problem_obj(request, file_info_obj):
     """
     Handles the unzipping of a problem object.
 
     Args:
-        file_info_dict (dict): A dictionary containing information about the file.
+        file_info_obj (dict): A dictionary containing information about the file.
 
     Returns:
         problem_obj: The created Problem object.
     """
-    problem_obj = create_unzip_problem_obj(request, file_info_dict)
-    format_data = handle_unzip_probleminout_data_format(request, file_info_dict)
+    problem_obj = create_unzip_problem_obj(request, file_info_obj)
+    format_data = handle_unzip_probleminout_data_format(request, file_info_obj)
     create_unzip_probleminout_obj(request, format_data, problem_obj)
 
     return problem_obj
     
 
-def create_problem_pdf(file_info_dict):
+def create_problem_pdf(file_info_obj):
     """
-    Create a PDF file from the given file_info_dict.
+    Create a PDF file from the given file_info_obj.
 
     Args:
-        file_info_dict (dict): A dictionary containing the information about the PDF file.
+        file_info_obj (dict): A dictionary containing the information about the PDF file.
             It should have the following keys:
             - "problem_title": The title of the problem.
             - "problem_pdf": The content of the PDF file.
@@ -94,34 +114,35 @@ def create_problem_pdf(file_info_dict):
         ContentFile: The created PDF file.
 
     """
-    pdf_name = file_info_dict["problem_title"] + ".pdf"
-    pdf_content = file_info_dict["problem_pdf"]
+    pdf_name = file_info_obj.problem_title + ".pdf"
+    pdf_content = file_info_obj.problem_pdf
     pdf_file = ContentFile(pdf_content, name=pdf_name)
 
     return pdf_file
 
 
-def create_unzip_problem_obj(request, file_info_dict):
+def create_unzip_problem_obj(request, file_info_obj):
     """
     Create and return a Problem object based on the provided file information dictionary.
 
     Args:
-        file_info_dict (dict): A dictionary containing information about the problem file.
+        file_info_obj (dict): A dictionary containing information about the problem file.
 
     Returns:
         Problem: The created Problem object.
 
     """
     try:
-        pdf_file = create_problem_pdf(file_info_dict)
+        pdf_file = create_problem_pdf(file_info_obj)
         problem_obj = Problem.objects.create(
-            name=file_info_dict["problem_title"],
+            name=file_info_obj.problem_title,
             description_file=pdf_file,
-            time_limit=file_info_dict["time_limit"],
+            time_limit=file_info_obj.time_limit,
             owner=User.objects.get(username=request.user),
-            is_processed=True,
         )
         return problem_obj
+    
+    
     except IntegrityError as e:
         if "UNIQUE constraint failed" in str(e):
             messages.error(request, "題目名稱已經存在！")
@@ -129,6 +150,10 @@ def create_unzip_problem_obj(request, file_info_dict):
             messages.error(request, "題目創建/上傳失敗！")
         raise problem_exceptions.ProblemUnZipCreateException(e)
 
+    except Exception as e:
+        messages.error(request, "題目創建/上傳失敗！")
+        raise problem_exceptions.ProblemUnZipCreateException(e)
+    
 
 def create_unzip_probleminout_obj(request, format_data, problem_obj):
     """
@@ -153,19 +178,19 @@ def create_unzip_probleminout_obj(request, format_data, problem_obj):
         messages.error(request, "ProblemInOut創建失敗！")
         raise problem_exceptions.ProblemUnZipInOutCreateException(e)
 
-def handle_unzip_probleminout_data_format(request, file_info_dict):
+def handle_unzip_probleminout_data_format(request, file_info_obj):
     """
-    Formats the testcase data obtained from the file_info_dict dictionary.
+    Formats the testcase data obtained from the file_info_obj dictionary.
 
     Args:
-        file_info_dict (dict): A dictionary containing the testcase data.
+        file_info_obj (dict): A dictionary containing the testcase data.
 
     Returns:
         dict: A formatted dictionary containing the testcase data.
 
     """
     try:
-        testcase_data = file_info_dict["testcases_data"]
+        testcase_data = file_info_obj.testcases_data
         formatted_data = dict()
 
         for filename, file_data in testcase_data.items():

@@ -109,7 +109,7 @@ class ProblemCrawler:
         if response.url == self.url + HomePath.JURY:
             return session
 
-        raise problems_exceptions.ProblemDownloaderLoginException("登入失敗")
+        raise problems_exceptions.ProblemDownloaderLoginException("Login Error.")
 
     def misjudgment(self, page):
         """
@@ -264,7 +264,7 @@ class ProblemCrawler:
         )
         if not is_valid:
             repeat_name = ", ".join(repeat_name_list)
-            message = f"上傳失敗！！{repeat_name} 題目名稱重複。"
+            message = f"上傳失敗！！{repeat_name} 題目名稱已與伺服器內題目重名。"
             return False, {}, contest_id, message
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
@@ -490,6 +490,9 @@ class ProblemCrawler:
         return contest_problem_info_dict
 
     def contest_problem_upload(self, contest_id, problem_data):
+
+        if "contest[save]" not in problem_data:
+            problem_data.update({"contest[save]": ""})
 
         if "contest[teams][]" in problem_data:
             del problem_data["contest[teams][]"]

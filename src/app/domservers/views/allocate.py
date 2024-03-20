@@ -19,7 +19,7 @@ from app.domservers import exceptions as domserver_exceptions
 from app.problems import exceptions as problem_exceptions
 
 from utils.admins import create_problem_crawler
-from utils.domserver.views import create_contest_record, update_problem_log_state, handle_problem_log, old_problem_info_remove_process
+from utils.domserver.views import form_create_contest_record, update_problem_log_state, handle_problem_log, old_problem_info_remove_process
 from utils.views import get_available_apps
 # Create your views here.
 
@@ -54,7 +54,7 @@ def contest_create_view(request):
                 )
 
                 if create_response:
-                    create_contest_record(request, form, client_obj, problem_crawler)
+                    form_create_contest_record(request, form, client_obj, problem_crawler)
                     messages.success(request, "考區創建成功！！")
                 else:
                     messages.error(request, "考區創建失敗！！")
@@ -71,7 +71,7 @@ def contest_create_view(request):
                 }
 
                 return render(request, "contest_creat_selected_problem.html", context)
-            
+
         except Exception as e:
             print(f"{type(e).__name__}:", e)
             return redirect(f"/contest/create/?server_client_id={server_client_id}")
@@ -89,8 +89,9 @@ def contest_create_view(request):
         }
 
         form = DomServerContestForm(initial=initial_data)
-        server_client_id = request.GET.get("server_client_id")
-        obj = DomServerClient.objects.get(id=server_client_id)
+
+    server_client_id = request.GET.get("server_client_id")
+    obj = DomServerClient.objects.get(id=server_client_id)
 
     context = {
         "form": form,
@@ -274,9 +275,8 @@ def contest_problem_shortname_edit_view(request, id, cid):
             server_client=client_obj, short_name=contest_info.get("contest[shortname]")
         )
         
-        # Delete the problem information in the old contest area
+        # Update the problem log state
         update_problem_log_state(request, "移除", client_obj, contest_obj)
-        old_problem_info_remove_process(request=request, problem_crawler=problem_crawler, cid=cid)
 
         # Update contest information
         upload_response = problem_crawler.contest_problem_upload(
@@ -295,6 +295,9 @@ def contest_problem_shortname_edit_view(request, id, cid):
         else:
             messages.error(request, "考區編輯失敗！！")
             raise domserver_exceptions.ContestUpdateException("Contest Area Edit Error!!")
+
+        # Delete the problem information in the old contest area
+        old_problem_info_remove_process(request=request, problem_crawler=problem_crawler, cid=cid)
 
         return redirect('admin:contest-items', obj_id=client_obj.id)
 

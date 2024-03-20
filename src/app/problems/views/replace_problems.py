@@ -41,6 +41,7 @@ def replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj):
 
                 if not is_success:
                     messages.error(request, message)
+                    new_problem_obj.delete()
                     return redirect("/admin/problems/problem/")
 
                 problem_client_data[log.server_client] = {
@@ -81,7 +82,6 @@ def update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_pr
         
     for obj, value in problem_client_data.items():
         problem_crawler = create_problem_crawler(obj)
-        problem_crawler.delete_problem(request, value["old_pid"])
 
         for cid in value["cid"]:
             problem_data_info = problem_crawler.get_contest_problems_info(cid)
@@ -102,6 +102,8 @@ def update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_pr
             if not result:
                 messages.error(request, f"考區 {obj.name} 題目取代失敗！！")
                 raise problem_exceptions.ProblemReplaceException("Problem replaced by Error!!")
+
+        problem_crawler.delete_problem(request, value["old_pid"])
 
     messages.success(request, f"考區題目取代成功！！")
     return redirect("/admin/problems/problem/")

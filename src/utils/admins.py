@@ -109,6 +109,9 @@ def upload_problem_info_process(queryset, server_object):
                   ...
               }
     """
+    problem_crawler = create_problem_crawler(server_object)
+    web_problems = problem_crawler.get_problems()
+
     upload_problem_info = dict()
     for query in queryset:
         problem_records = query.problem_log.all()
@@ -118,6 +121,11 @@ def upload_problem_info_process(queryset, server_object):
             clients_host_set.add(record.server_client.host)
 
         if server_object.host not in clients_host_set:
+            web_problem_state = "未上傳"
+        else:
+            web_problem_state = "已上傳"
+
+        if query.name not in web_problems:
             web_problem_state = "未上傳"
         else:
             web_problem_state = "已上傳"

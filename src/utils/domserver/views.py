@@ -5,6 +5,7 @@ from django.contrib import messages
 from app.users.models import User
 from app.problems.models import Problem
 from app.problems.models import ProblemServerLog
+from app.domservers.models.dom_server import DomServerContest
 
 from utils.admins import create_problem_crawler
 from utils.problems.views import create_problem_log
@@ -13,7 +14,7 @@ from app.domservers import exceptions as domserver_exceptions
 from utils import exceptions as utils_exceptions
 
 
-def create_contest_record(request, form, client_obj, problem_crawler):
+def form_create_contest_record(request, form, client_obj, problem_crawler):
     """
     Create a contest.
 
@@ -121,7 +122,6 @@ def update_problem_log_state(request, state, client_obj, contest_obj):
     Returns:
         None
     """
-    owner = User.objects.get(username=request.user.username)
     problem_crawler = create_problem_crawler(client_obj)
     
     problem_log_web_id_list = get_problem_log_web_id_list(

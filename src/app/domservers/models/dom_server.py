@@ -121,7 +121,7 @@ class DomServerContest(BaseModel):
     enabled = models.BooleanField("是否啟用", default=False)
 
     def __str__(self):
-        return f"{self.short_name}"
+        return f"{self.server_client}-{self.short_name}"
 
     class Meta:
         verbose_name = "DomServer Contest 考場"
