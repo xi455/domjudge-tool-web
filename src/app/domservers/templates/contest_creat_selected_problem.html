@@ -33,8 +33,8 @@ delete-confirmation{%endblock %}
                 <div id="content-main">
                     <form action="{% url 'contest_problem_shortname_create' %}" method="post" id="formPost">
                         {% csrf_token %}
-                        client_name:{{server_client_id}}
-                        <input type="hidden" name="server_client_id" value="{{server_client_id}}">
+                        client_name:{{client_obj.id}}
+                        <input type="hidden" name="server_user_id" value="{{server_user.id}}">
                         <div class="row">
                             <div class="d-flex col-12 col-sm-9">
                                 <div class="card ml-3 w-100" style="height: 28rem;">

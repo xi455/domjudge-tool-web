@@ -13,6 +13,40 @@ class DomServerClient(BaseModel):
         "Dom server URL",
         help_text="https://domserver.example.com",
     )
+    disable_ssl = models.BooleanField(default=False)
+    timeout = models.BooleanField(default=False)
+    version = models.CharField(
+        "Dom Server 版本",
+        max_length=16,
+        default="7.3.2",
+    )
+    api_version = models.CharField(
+        "Dom Server API 版本",
+        max_length=16,
+        default="v4",
+    )
+
+    def __str__(self):
+        return f"{self.name}"
+
+    class Meta:
+        verbose_name = "Dom Server 內容資訊"
+        verbose_name_plural = "Dom Server 內容資訊"
+
+
+class DomServerUser(BaseModel):
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="user_owner",
+        verbose_name="使用者",
+    )
+    server_client = models.ForeignKey(
+        DomServerClient,
+        on_delete=models.CASCADE,
+        related_name="server_client",
+        verbose_name="伺服器",
+    )
     username = models.CharField(
         "帳號",
         max_length=128,
@@ -25,8 +59,6 @@ class DomServerClient(BaseModel):
             # editable=False,
         )
     )
-    disable_ssl = models.BooleanField(default=False)
-    timeout = models.BooleanField(default=False)
     category_id = models.BigIntegerField(
         default=0,
         verbose_name="類型ID",
@@ -38,37 +70,21 @@ class DomServerClient(BaseModel):
         help_text="請輸入所屬關係ID",
     )
     affiliation_country = models.CharField("所屬國家", max_length=128, default="TWN")
-    owner = models.ForeignKey(
-        "users.User",
-        on_delete=models.CASCADE,
-        related_name="dom_servers",
-        verbose_name="擁有者",
-    )
-    version = models.CharField(
-        "Dom Server 版本",
-        max_length=16,
-        default="7.3.2",
-    )
-    api_version = models.CharField(
-        "Dom Server API 版本",
-        max_length=16,
-        default="v4",
-    )
+    
+    # @cached_property
+    # def _signer(self):
+    #     return Signer()
 
-    @cached_property
-    def _signer(self):
-        return Signer()
+    # @property
+    # def password(self):
+    #     return self._signer.unsign(self.mask_password)
 
-    @property
-    def password(self):
-        return self._signer.unsign(self.mask_password)
-
-    @password.setter
-    def password(self, value):
-        self.mask_password = self._signer.sign(value)
+    # @password.setter
+    # def password(self, value):
+    #     self.mask_password = self._signer.sign(value)
 
     def __str__(self):
-        return f"{self.name}"
+        return f"{self.owner}-{self.username}"
 
     class Meta:
         verbose_name = "Dom Server 連線資訊"
@@ -81,14 +97,12 @@ class DomServerContest(BaseModel):
         on_delete=models.CASCADE,
         related_name="contest_owner",
         verbose_name="使用者",
-        default=1,
     )
     server_client = models.ForeignKey(
         DomServerClient,
         on_delete=models.CASCADE,
         related_name="contest_server_client",
         verbose_name="伺服器紀錄",
-        default=1,
         # editable=False,
     )
     cid = models.CharField(

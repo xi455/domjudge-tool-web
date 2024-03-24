@@ -42,7 +42,7 @@ delete-confirmation{%endblock %}
           {{ form.non_field_errors }}
           <form action="" class="needs-validation" novalidate method="post">
             {% csrf_token %}
-            <input type="hidden" name="server_client_id" value="{{server_client_id}}">
+            <input type="hidden" name="server_user_id" value="{{server_user.id}}">
             <div class="row">
               <div class="col-12 col-sm-9">                
                 <div class="form-group has-validation">

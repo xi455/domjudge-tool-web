@@ -6,7 +6,7 @@ from django import forms
 from django.core.validators import RegexValidator
 from pytz import UnknownTimeZoneError, timezone
 
-from app.domservers.models import DomServerClient, DomServerContest
+from app.domservers.models import DomServerUser, DomServerContest
 from utils.forms import validate_country_format
 
 
@@ -19,21 +19,16 @@ class DomServerAccountForm(forms.ModelForm):
     )
 
     class Meta:
-        model = DomServerClient
+        model = DomServerUser
         fields = (
-            "name",
-            "host",
-            "username",
+            "server_client",
+            "username",          
             "password_field",
-            "disable_ssl",
-            "timeout",
             "category_id",
             "affiliation_id",
             "affiliation_country",
-            "owner",
-            "version",
-            "api_version",
         )
+        exclude = ("owner",)
 
 
 class DomServerContestForm(forms.ModelForm):

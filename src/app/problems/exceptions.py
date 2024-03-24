@@ -10,6 +10,10 @@ class ProblemDownloaderDownloadFailException(ProblemDownloaderException):
     pass
 
 
+class ProblemDownloaderDemoContestNotFoundException(ProblemDownloaderException):
+    pass
+
+
 class ProblemCreateLogException(Exception):
     pass
 

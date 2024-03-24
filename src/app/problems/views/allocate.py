@@ -12,7 +12,7 @@ from app.domservers.models.dom_server import DomServerClient, DomServerContest
 
 from utils.views import get_available_apps
 from utils.admins import create_problem_crawler, upload_problem_info_process
-from utils.problems.views import create_problem_log, handle_problems_upload_info
+from utils.problems.views import create_problem_log, handle_problems_upload
 
 from app.problems.forms import ServerClientForm
 from app.problems.models import Problem, ProblemServerLog
@@ -103,7 +103,7 @@ def problem_upload_view(request):
             "contest_obj": contest_obj,
         }
 
-        problems_upload_info, problems_obj_data_dict = handle_problems_upload_info(
+        problems_upload_info, problems_obj_data_dict = handle_problems_upload(
             request=request,
             problem_data=problem_data
         )

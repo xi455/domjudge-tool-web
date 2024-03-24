@@ -1,6 +1,79 @@
+from copy import copy
+
+from app.users.models import User
 from app.problems.models import ProblemServerLog
-from utils.domserver.views import get_problem_log_web_id_list
+from app.domservers.models.dom_server import DomServerContest, DomServerClient
 from app.domservers.views.contest import create_problem_log_for_contest_edit
+from app.domservers.views.demo_contest_handle import demo_contest_data, upload_demo_contest
+
+from utils.domserver.views import get_problem_log_web_id_list
+
+
+def validator_demo_contest_exist(problem_crawler, obj):
+    contests = problem_crawler.get_contest_all()
+    admin_owner = User.objects.get(username="admin")
+    # admin_server = DomServerClient.objects.filter(host=obj.host, owner=admin_owner) 
+
+    demo_contest_obj = DomServerContest.objects.filter(server_client=obj, short_name="demo")
+    if "demo" not in contests and not demo_contest_obj.exists():
+        
+        result, demo_contset_response = upload_demo_contest(admin_owner, obj)
+        
+        if not result:
+            return False
+        
+        demo_contest_cid = problem_crawler.get_contest_all()["demo"].CID
+        demo_contset_response.cid = demo_contest_cid
+        demo_contset_response.save()
+
+        
+    if not demo_contest_obj.exists():
+        demo_contest_obj_response = demo_contest_data(admin_owner, obj)
+        demo_contest_obj_response.cid = contests["demo"].CID
+
+        demo_contest_response = problem_crawler.contest_format_process(
+            contest_data=demo_contest_obj_response.__dict__
+        )
+
+        demo_contest_response.update(problem_crawler.get_contest_or_problem_information(demo_contest_obj_response.cid, "problem"))
+        result = problem_crawler.contest_problem_upload(
+            demo_contest_obj_response.cid, demo_contest_response
+        )
+
+        if not result:
+            return False
+        
+        demo_contest_obj_response.save()
+    else:
+        demo_contest_obj = demo_contest_obj.first()
+
+    if "demo" not in contests:
+        demo_contest_response = problem_crawler.contest_format_process(
+            contest_data=demo_contest_obj.__dict__
+        )
+
+        problems_log_obj = ProblemServerLog.objects.filter(
+            server_client=obj,
+            contest=demo_contest_obj,
+            web_problem_state="新增",
+        )
+
+        problems_log_dict = [{"name":obj.problem.name, "id":obj.web_problem_id} for obj in problems_log_obj]
+        demo_problem_response = problem_crawler.problem_format_process(problems_log_dict)
+
+        demo_contest_response.update(demo_problem_response)
+        result = problem_crawler.contest_and_problem_create(
+            create_contest_information=demo_contest_response
+        )
+
+        if not result:
+            return False
+        
+        contests = problem_crawler.get_contest_all()
+        demo_contest_obj.cid = contests["demo"].CID
+        demo_contest_obj.save()
+    
+    return True
 
 def validator_problem_exist(contest_info):
     """

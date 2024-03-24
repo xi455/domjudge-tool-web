@@ -24,7 +24,7 @@ def handle_problem_upload_format(request, problem_obj):
         messages.error(request, "題目上傳格式錯誤!")
         raise utils_exceptions.CrawlerProblemUploadFormatException(e)
 
-def handle_problems_upload_info(request, problem_data):
+def handle_problems_upload(request, problem_data):
     """
     Handle problems upload information.
 

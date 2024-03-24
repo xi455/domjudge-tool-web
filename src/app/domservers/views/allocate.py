@@ -9,7 +9,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from app.users.models import User
 from app.problems.models import ProblemServerLog
 from app.domservers.forms import DomServerContestForm
-from app.domservers.models import DomServerClient, DomServerContest
+from app.domservers.models import DomServerClient, DomServerUser, DomServerContest
 
 from app.domservers.views.validator import validator_problem_exist, check_create_problem_log_for_contest_edit
 from app.domservers.views.contest import filter_contest_selected_problem, create_copy_contest_record, get_copy_problem_log_and_upload_process
@@ -18,6 +18,7 @@ from app.domservers.views.shortname import contest_problem_information_update_pr
 from app.domservers import exceptions as domserver_exceptions
 from app.problems import exceptions as problem_exceptions
 
+from utils.validator_pydantic import DomServerClientModel
 from utils.admins import create_problem_crawler
 from utils.domserver.views import form_create_contest_record, update_problem_log_state, handle_problem_log, old_problem_info_remove_process
 from utils.views import get_available_apps
@@ -32,17 +33,24 @@ def contest_create_view(request):
     if request.method == "POST":
         try:
             form = DomServerContestForm(request.POST)
-            server_client_id = request.POST.get("server_client_id")
+            server_user_id = request.POST.get("server_user_id")
 
             if form.is_valid():
                 creat_contest_data = form.cleaned_data
-                client_obj = DomServerClient.objects.get(id=server_client_id)
+                server_user = DomServerUser.objects.get(id=server_user_id)
+                client_obj = server_user.server_client
 
-                problem_crawler = create_problem_crawler(client_obj)
+                server_client = DomServerClientModel(
+                    host=client_obj.host,
+                    username=server_user.username,
+                    mask_password=server_user.mask_password,
+                )
+                
+                problem_crawler = create_problem_crawler(server_client)
 
                 if DomServerContest.objects.filter(server_client=client_obj, short_name=form.cleaned_data["short_name"]).exists():
                     messages.error(request, "考區簡稱重複！！請重新輸入")
-                    return redirect(f"/contest/create/?server_client_id={server_client_id}")
+                    raise domserver_exceptions.ContestCreateDuplicateException("Contest Shortname Duplicate!!")
                 
                 problem_log_objs_list = filter_contest_selected_problem(request, client_obj)
 
@@ -62,8 +70,8 @@ def contest_create_view(request):
 
                 contest_data_json = json.dumps(creat_contest_data)
                 context = {
-                    "server_client_id": server_client_id,
-                    "server_client_name": client_obj.name,
+                    "server_user": server_user,
+                    "client_obj": client_obj,
                     "contest_data_json": contest_data_json,
                     "problem_log_objs_list": problem_log_objs_list,
                     "opts": client_obj._meta,
@@ -72,9 +80,12 @@ def contest_create_view(request):
 
                 return render(request, "contest_creat_selected_problem.html", context)
 
+        except domserver_exceptions.ContestCreateDuplicateException as e:
+            print(f"{type(e).__name__}:", e)
         except Exception as e:
             print(f"{type(e).__name__}:", e)
-            return redirect(f"/contest/create/?server_client_id={server_client_id}")
+
+        return redirect(f"/contest/create/?server_user_id={server_user.id}")
 
     if request.method == "GET":
         initial_data = {
@@ -90,14 +101,15 @@ def contest_create_view(request):
 
         form = DomServerContestForm(initial=initial_data)
 
-    server_client_id = request.GET.get("server_client_id")
-    obj = DomServerClient.objects.get(id=server_client_id)
+    server_user_id = request.GET.get("server_user_id")
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    server_client = server_user.server_client
 
     context = {
         "form": form,
-        "server_client_id": server_client_id,
-        "server_client_name": obj.name,
-        "opts": obj._meta,
+        "server_user": server_user,
+        "server_client_name": server_client.name,
+        "opts": server_client._meta,
         "available_apps": available_apps,
     }
 
