@@ -65,27 +65,27 @@ urlpatterns = [
         name="contest_problem_shortname_create",
     ),
     path(
-        "contest-problem/<id>/create/",
+        "contest-problem/<server_user_id>/create/",
         contest_problem_info_upload_view,
         name="contest_problem_create",
     ),
     path(
-        "contest/<server_id>/<contest_id>/<cid>/edit/page_number=<page_number>",
+        "contest/<server_user_id>/<contest_id>/<cid>/edit/page_number=<page_number>",
         contest_information_edit_view,
         name="contest_information_edit",
     ),
     path(
-        "contest-problem/<id>/<cid>/shortname/edit/",
+        "contest-problem/<server_user_id>/<cid>/shortname/edit/",
         contest_problem_shortname_edit_view,
         name="contest_problem_shortname_edit",
     ),
     path(
-        "contest/<id>/<cid>/select/problem/edit/",
+        "contest/<server_user_id>/<cid>/select/problem/edit/",
         contest_select_problem_edit_view,
         name="contest_select_problem_edit",
     ),
     path(
-        "contest/<id>/<contest_id>/<cid>/copy/",
+        "contest/<server_user_id>/<contest_id>/<cid>/copy/",
         contest_copy_view,
         name="contest_information_copy",
     ),

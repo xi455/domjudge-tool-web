@@ -30,12 +30,13 @@ def get_contest_selected_problem_local_id(form_data):
     return problem_info_dict
 
 
-def create_problem_log_for_contest_edit(request, client_obj, contest_obj, form_data, problem_log_web_id_set, problem_logs_object):
+def create_problem_log_for_contest_edit(request, server_client, client_obj, contest_obj, form_data, problem_log_web_id_set, problem_logs_object):
     """
     Create problem logs for contest edit.
 
     Args:
         request: The request object.
+        server_client: The server object connection infromation.
         client_obj: The client object.
         contest_obj: The contest object.
         form_data: The form data.
@@ -54,7 +55,7 @@ def create_problem_log_for_contest_edit(request, client_obj, contest_obj, form_d
     problem_objs_dict = problem_local_id_dict
     if problem_objs_dict:
         create_problem_log_format_and_record(
-            request, client_obj, contest_obj, problem_objs_dict, no_existing_problem_id_set=no_existing_problem_id_set
+            request, server_client, client_obj, contest_obj, problem_objs_dict, no_existing_problem_id_set=no_existing_problem_id_set
         )
 
 
@@ -129,7 +130,7 @@ def create_copy_contest_record(request, contest_shortname_rename, contest_obj, p
         raise domserver_exceptions.ContestCreateException(e)
     
 
-def get_copy_problem_log_and_upload_process(request, problem_logs, client_obj, new_contest_obj):
+def get_copy_problem_log_and_upload_process(request, server_client, problem_logs, client_obj, new_contest_obj):
     """
     Get valid problem logs and upload process.
 
@@ -151,5 +152,5 @@ def get_copy_problem_log_and_upload_process(request, problem_logs, client_obj, n
 
     if problem_objs_dict:
         create_problem_log_format_and_record(
-            request, client_obj, new_contest_obj, problem_objs_dict
+            request, server_client, client_obj, new_contest_obj, problem_objs_dict
         )

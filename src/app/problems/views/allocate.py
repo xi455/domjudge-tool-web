@@ -8,11 +8,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
 from app.users.models import User
-from app.domservers.models.dom_server import DomServerClient, DomServerContest
+from app.domservers.models.dom_server import DomServerClient, DomServerUser, DomServerContest
 
 from utils.views import get_available_apps
 from utils.admins import create_problem_crawler, upload_problem_info_process
 from utils.problems.views import create_problem_log, handle_problems_upload
+from utils.validator_pydantic import DomServerClientModel
 
 from app.problems.forms import ServerClientForm
 from app.problems.models import Problem, ProblemServerLog
@@ -44,14 +45,14 @@ def upload_zip_view(request, pk=None):
             if pk is None:
                 for file in files:
                     # Get required file information
-                    file_info_obj = handle_upload_required_file(file)
+                    file_info_obj = handle_upload_required_file(request, file)
                 
                     # Create problem object and problem in/out object
                     handle_unzip_problem_obj(request, file_info_obj)
 
             if pk is not None:
                 # files[0] is the first file in the list
-                file_info_obj = handle_upload_required_file(files[0])
+                file_info_obj = handle_upload_required_file(request, files[0])
 
                 # Create problem object and problem in/out object
                 new_problem_obj = handle_unzip_problem_obj(request, file_info_obj)
@@ -64,9 +65,12 @@ def upload_zip_view(request, pk=None):
                 
                 problem.delete() 
 
+
+
         except Exception as e:
             if not messages.get_messages(request):
-                messages.error(request, "題目上傳失敗！！請刪除上傳的替換題目")
+                messages.error(request, "題目上傳失敗！！")
+                new_problem_obj.delete()
 
             print(f"{type(e).__name__}:", e)
             return redirect("/admin/problems/problem/")
@@ -90,16 +94,24 @@ def problem_upload_view(request):
         contest_id = request.POST.get("contests")
 
         owner_obj = get_object_or_404(User, username=request.user)
-        server_client = get_object_or_404(DomServerClient, name=domserver_name)
+        client_obj = get_object_or_404(DomServerClient, name=domserver_name)
+        server_user = DomServerUser.objects.filter(owner=request.user, server_client=client_obj).first()
+        
+        server_client = DomServerClientModel(
+            host=client_obj.host,
+            username=server_user.username,
+            mask_password=server_user.mask_password,
+        )
+        
         contest_obj = DomServerContest.objects.filter(
-            server_client=server_client, cid=contest_id
+            server_client=client_obj, cid=contest_id
         ).first()
         problem_crawler = create_problem_crawler(server_client)
 
         problem_data = {
             "problem_id_list": problem_id_list,
             "owner_obj": owner_obj,
-            "server_client": server_client,
+            "client_obj": client_obj,
             "contest_obj": contest_obj,
         }
 
@@ -202,35 +214,40 @@ def get_contests_info_and_problem_info_api(request):
     # __in 是 Django ORM 的一種查詢過濾器（Query Filter），它接受一個列表，並返回一個包含所有在該列表中的值的對象的 QuerySet。
 
     form = ServerClientForm(server_name_dict)
-
     if form.is_valid():
         queryset = Problem.objects.filter(id__in=problem_id_list)
         server_object = get_object_or_404(
             DomServerClient, name=server_name_dict["name"]
         )
+        server_user = DomServerUser.objects.filter(owner=request.user, server_client=server_object).first()
+        
+
+        server_client = DomServerClientModel(
+            host=server_object.host,
+            username=server_user.username,
+            mask_password=server_user.mask_password,
+        )
+        
         upload_problem_info = upload_problem_info_process(
-            queryset=queryset, server_object=server_object
+            queryset=queryset, server_client=server_client
         )
 
-        server_name = form.cleaned_data.get("name", None)
-        serverclient = get_object_or_404(DomServerClient, name=server_name)
-
         if request.user.is_superuser:
-            server_contests_info_dict = DomServerContest.objects.filter(
-                server_client=serverclient
+            contest_queryset = DomServerContest.objects.filter(
+                server_client=server_object
             )
         else:
-            server_contests_info_dict = DomServerContest.objects.filter(
-                owner=request.user, server_client=serverclient
+            contest_queryset = DomServerContest.objects.filter(
+                owner=request.user, server_client=server_object
             )
 
         contests_data_dict = {
-            obj.short_name: obj.cid for obj in server_contests_info_dict
+            obj.short_name: obj.cid for obj in contest_queryset
         }
 
         if not request.user.is_superuser:
             demo_contest = DomServerContest.objects.filter(
-                server_client=serverclient, short_name="demo"
+                server_client=server_object, short_name="demo"
             ).first()
 
             contests_data = {demo_contest.short_name: demo_contest.cid}

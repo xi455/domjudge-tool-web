@@ -92,12 +92,13 @@ def validator_problem_exist(contest_info):
     return False
 
 
-def check_create_problem_log_for_contest_edit(request, client_obj, contest_obj, form_data, problem_crawler, cid):
+def check_create_problem_log_for_contest_edit(request, server_client, client_obj, contest_obj, form_data, problem_crawler, cid):
     """
     Check if problem logs need to be created for contest edit.
 
     Args:
         request: The HTTP request object.
+        server_client: The server object connection information.
         client_obj: The client object.
         contest_obj: The contest object.
         form_data: The form data.
@@ -115,4 +116,4 @@ def check_create_problem_log_for_contest_edit(request, client_obj, contest_obj, 
     )
 
     if problem_logs_object.count() < len(problem_log_web_id_set):
-        create_problem_log_for_contest_edit(request, client_obj, contest_obj, form_data, problem_log_web_id_set, problem_logs_object)
+        create_problem_log_for_contest_edit(request, server_client, client_obj, contest_obj, form_data, problem_log_web_id_set, problem_logs_object)

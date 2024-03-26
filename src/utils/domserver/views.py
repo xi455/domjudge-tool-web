@@ -65,13 +65,14 @@ def get_problem_log_web_id_list(cid, problem_crawler):
 
 
 def create_problem_log_format_and_record(
-    request, client_obj, contest_obj, problem_info_dict, no_existing_problem_id_set=None
+    request, server_client, client_obj, contest_obj, problem_info_dict, no_existing_problem_id_set=None
 ):
     """
     Create problem log format and record.
 
     Args:
         request: The request object.
+        server_client: The server object connection information.
         client_obj: The client object.
         contest_obj: The contest object.
         problem_info_dict: The dictionary containing problem information.
@@ -80,8 +81,8 @@ def create_problem_log_format_and_record(
     Returns:
         None
     """
-    owner = User.objects.get(username=request.user.username)
-    problem_crawler = create_problem_crawler(client_obj)
+    owner = request.user
+    problem_crawler = create_problem_crawler(server_client)
 
     if no_existing_problem_id_set is None:
         problem_id_list = get_problem_log_web_id_list(
@@ -100,7 +101,7 @@ def create_problem_log_format_and_record(
                 f"problem_{id}": {
                     "owner": owner,
                     "problem": problem_obj,
-                    "server_client": client_obj,
+                    "client_obj": client_obj,
                     "web_problem_id": id,
                     "contest": contest_obj,
                     "web_problem_state": "新增",
@@ -109,30 +110,37 @@ def create_problem_log_format_and_record(
         )
     create_problem_log(request=request, problems_obj_data_dict=problems_obj_data_dict)
 
-def update_problem_log_state(request, state, client_obj, contest_obj):
+def update_problem_log_state(state, server_client, client_obj, contest_obj):
     """
     Update the problem log state in the ProblemServerLog objects based on the given state.
 
     Args:
         request: The HTTP request object.
         state (str): The state to update the web problem to. Can be "移除" or "新增".
+        server_client: The server object connection information.
         client_obj: The client object.
         contest_obj: The contest object.
 
     Returns:
         None
     """
-    problem_crawler = create_problem_crawler(client_obj)
+    problem_crawler = create_problem_crawler(server_client)
     
     problem_log_web_id_list = get_problem_log_web_id_list(
         contest_obj.cid, problem_crawler
     )
 
-    problem_log = ProblemServerLog.objects.filter(
-        server_client=client_obj,
-        contest=contest_obj,
-        web_problem_id__in=problem_log_web_id_list,
-    )
+    if state == "新增":
+        problem_log = ProblemServerLog.objects.filter(
+            server_client=client_obj,
+            contest=contest_obj,
+            web_problem_id__in=problem_log_web_id_list,
+        )
+    else:
+        problem_log = ProblemServerLog.objects.filter(
+            server_client=client_obj,
+            contest=contest_obj,
+        )
 
     for obj in problem_log:
         if state == "移除":
@@ -141,11 +149,11 @@ def update_problem_log_state(request, state, client_obj, contest_obj):
         if state == "新增":
             obj.web_problem_state = "新增"
 
+    return problem_log
+    # ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
 
-    ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
 
-
-def handle_problem_log(form_data, request, client_obj, contest_obj):
+def handle_problem_log(request, form_data, server_client, client_obj, contest_obj):
     """
     Handle problem log.
 
@@ -164,7 +172,7 @@ def handle_problem_log(form_data, request, client_obj, contest_obj):
         problem_info_dict[data.get("id")] = data
 
     create_problem_log_format_and_record(
-        request, client_obj, contest_obj, problem_info_dict
+        request, server_client, client_obj, contest_obj, problem_info_dict
     )
 
 
@@ -198,6 +206,8 @@ def old_problem_info_remove_process(request, problem_crawler, cid):
                 problem_crawler.delete_contest_problem(
                     contest_id=cid, web_problem_id=problem_id
                 )
+
+            return problem_need_delete_id
 
     except Exception as e:
         messages.error(request, "移除舊題目資訊時發現錯誤")

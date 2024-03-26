@@ -4,9 +4,10 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 from django_object_actions import DjangoObjectActions, action
+
 from pydantic import BaseModel
 
-from app.domservers.models import DomServerClient, DomServerContest
+from app.domservers.models import DomServerClient, DomServerUser, DomServerContest
 from utils.admins import (
     create_problem_crawler,
     get_newest_problems_log,
@@ -14,12 +15,14 @@ from utils.admins import (
     upload_problem_info_process,
 )
 from utils.views import get_available_apps
+from utils.validator_pydantic import DomServerClientModel
 
 from .forms import ProblemNameForm
 from .models import Problem, ProblemInOut, ProblemServerLog
 
 
 class ProblemTestCase(BaseModel):
+    sample: bool
     input: str
     out: str
 
@@ -126,6 +129,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             ) + testcase_md5(testcase_obj.answer_content)
 
             problem_testcase_info = {
+                "sample": testcase_obj.is_sample,
                 "input": testcase_obj.input_content,
                 "out": testcase_obj.answer_content,
             }
@@ -194,10 +198,18 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                 problems_dict[problem_md5].input,
                 problems_dict[problem_md5].out,
             )
+            # sample = "on" if problems_dict[problem_md5].sample else "off"
+            # sample = problems_dict[problem_md5].sample
             problem_testcase_info_data = {
                 "add_input": ("add.in", testcase_in),
                 "add_output": ("add.out", testcase_out),
             }
+
+            if problems_dict[problem_md5].sample:
+                problem_testcase_info_data["add_sample"] = "on"
+
+
+            print("problem_testcase_info_data:", problem_testcase_info_data)
             result = problem_crawler.update_testcase(
                 form_data=problem_testcase_info_data,
                 id=problem_log_obj.web_problem_id,
@@ -246,7 +258,14 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         problem_log_obj_all = problem_obj.problem_log.all()
 
         for problem_log_obj in problem_log_obj_all:
-            server_client = problem_log_obj.server_client
+
+            server_user = DomServerUser.objects.get(owner=request.user, server_client=problem_log_obj.server_client)
+            client_obj = server_user.server_client
+            server_client = DomServerClientModel(
+                host=client_obj.host,
+                username=server_user.username,
+                mask_password=server_user.mask_password,
+            )
 
             problem_crawler = create_problem_crawler(server_client)
             web_testcases_all_dict = problem_crawler.get_testcases_all(
@@ -291,7 +310,13 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
         result_bool = True
         newest_problem_log = get_newest_problems_log(obj=obj)
         for problem_log_obj in newest_problem_log:
-            server_client = problem_log_obj.server_client
+            server_user = DomServerUser.objects.get(owner=request.user, server_client=problem_log_obj.server_client)
+            client_obj = server_user.server_client
+            server_client = DomServerClientModel(
+                host=client_obj.host,
+                username=server_user.username,
+                mask_password=server_user.mask_password,
+            )
             problem_crawler = create_problem_crawler(server_client)
 
             is_success = problem_crawler.update_problem_information(
@@ -345,16 +370,27 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             Return the selected problem to the upload_process.html page.
         """
         if request.user.is_superuser:
-            server_objects = DomServerClient.objects.all().order_by("id")
+            server_users = DomServerUser.objects.all().order_by("server_client")
+            # server_objects = DomServerClient.objects.all().order_by("id")
         else:
-            server_objects = DomServerClient.objects.filter(owner=request.user).order_by(
-                "id"
-            )
+            server_users = DomServerUser.objects.filter(owner=request.user).order_by("id")
+            # server_objects = DomServerClient.objects.filter(owner=request.user).order_by(
+            #     "id"
+            # )
 
-        if not server_objects:
-            return messages.error(request, "請先新增伺服器資訊！！")
+        print("server_users:", server_users)
+        if not server_users:
+            return messages.error(request, "請先新增伺服器帳號連線資訊！！")
+        
+        servers_client_name = server_users.values_list("server_client__name", flat=True).distinct()
+        print("servers_client_name:", servers_client_name)
+        servers_client_name_list = list()
+        for obj in server_users:
+            if obj.server_client.name not in servers_client_name_list:
+                servers_client_name_list.append(obj.server_client.name)
 
-        first_server_object = server_objects[0]
+        first_server_user = server_users[0]
+        first_server_object = first_server_user.server_client
 
         if request.user.is_superuser:
             data = DomServerContest.objects.filter(server_client=first_server_object)
@@ -369,13 +405,19 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             demo_contest = DomServerContest.objects.filter(server_client=first_server_object, short_name="demo").first()
             contest_name.insert(0, (demo_contest.short_name, demo_contest.cid))
 
+        server_client = DomServerClientModel(
+            host=first_server_object.host,
+            username=first_server_user.username,
+            mask_password=first_server_user.mask_password,
+        )
+
         problem_info = upload_problem_info_process(
-            queryset=queryset, server_object=first_server_object
+            queryset=queryset, server_client=server_client
         )
 
         context = {
             "problem_info": problem_info,
-            "servers_client_name": [obj.name for obj in server_objects],
+            "servers_client_name": servers_client_name,
             "contest_name": contest_name,
             "opts": queryset.model._meta,
             "available_apps": get_available_apps(request),

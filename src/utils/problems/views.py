@@ -9,6 +9,16 @@ from utils import exceptions as utils_exceptions
 from app.problems import exceptions as problem_exceptions
 
 def handle_problem_upload_format(request, problem_obj):
+    """
+    Handles the problem upload format.
+
+    Args:
+        request: The HTTP request object.
+        problem_obj: The problem object.
+
+    Returns:
+        A tuple containing the upload file information.
+    """
     try:
         response_zip = build_zip_response(problem_obj)
         problem_zip = b"".join(response_zip.streaming_content)
@@ -32,7 +42,7 @@ def handle_problems_upload(request, problem_data):
         problem_data (dict): A dictionary containing the following keys:
             - owner_obj: The owner object.
             - contest_obj: The contest object.
-            - server_client: The server client.
+            - client_obj: The server client.
             - problem_id_list: A list of problem IDs.
 
     Returns:
@@ -42,7 +52,7 @@ def handle_problems_upload(request, problem_data):
     """
     owner_obj = problem_data.get("owner_obj")
     contest_obj = problem_data.get("contest_obj")
-    server_client = problem_data.get("server_client")
+    client_obj = problem_data.get("client_obj")
 
     problem_id_list = problem_data.get("problem_id_list")
 
@@ -57,7 +67,7 @@ def handle_problems_upload(request, problem_data):
         problems_obj_dict[problem_obj.name] = {
             "owner": owner_obj,
             "problem": problem_obj,
-            "server_client": server_client,
+            "client_obj": client_obj,
             "contest": contest_obj,
             "web_problem_state": "新增",
         }
@@ -81,7 +91,7 @@ def create_problem_log(request, problems_obj_data_dict):
             create_problem_log_obj = ProblemServerLog(
                 owner=value.get("owner"),
                 problem=value.get("problem"),
-                server_client=value.get("server_client"),
+                server_client=value.get("client_obj"),
                 web_problem_id=value.get("web_problem_id"),
                 contest=value.get("contest"),
                 web_problem_state=value.get("web_problem_state"),

@@ -118,14 +118,20 @@ def contest_create_view(request):
 
 @transaction.atomic
 @require_http_methods(["POST"])
-def contest_problem_info_upload_view(request, id):
+def contest_problem_info_upload_view(request, server_user_id):
     form_data = request.POST
-    client_obj = DomServerClient.objects.get(id=id)
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    client_obj = server_user.server_client
+    server_client = DomServerClientModel(
+        host=client_obj.host,
+        username=server_user.username,
+        mask_password=server_user.mask_password,
+    )
 
     try:
         create_contest_info = contest_problem_shortname_process(request=request, form_data=form_data)
 
-        problem_crawler = create_problem_crawler(client_obj)
+        problem_crawler = create_problem_crawler(server_client)
         contest_obj = DomServerContest.objects.get(
             short_name=create_contest_info.get("contest[shortname]")
         )
@@ -137,26 +143,33 @@ def contest_problem_info_upload_view(request, id):
 
         if upload_result:
             messages.success(request, "題目上傳成功！！")
-            handle_problem_log(form_data, request, client_obj, contest_obj)
+            handle_problem_log(request, form_data, server_client, client_obj, contest_obj)
         else:
             messages.error(request, "題目上傳失敗！！")
             raise problem_exceptions.ProblemUploadException("Error to upload Problem!!")
 
-        return redirect("admin:contest-items", obj_id=client_obj.id)
+        return redirect("admin:contest-items", obj_id=server_user.id)
     except Exception as e:
         print(f"{type(e).__name__}:", e)
-        return redirect("admin:contest-items", obj_id=client_obj.id)
+        return redirect("admin:contest-items", obj_id=server_user.id)
 
 
 @require_http_methods(["POST"])
 def contest_problem_shortname_create_view(request):
     available_apps = get_available_apps(request)
-    server_client_id = request.POST.get("server_client_id")
+    server_user_id = request.POST.get("server_user_id")
     contest_data = json.loads(request.POST.get("contestDataJson"))
     selected_problem_dict = json.loads(request.POST.get("selectedCheckboxes"))
 
-    client_obj = DomServerClient.objects.get(id=server_client_id)
-    problem_crawler = create_problem_crawler(client_obj)
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    client_obj = server_user.server_client
+    server_client = DomServerClientModel(
+        host=client_obj.host,
+        username=server_user.username,
+        mask_password=server_user.mask_password,
+    )
+
+    problem_crawler = create_problem_crawler(server_client)
 
     contest_information = problem_crawler.contest_format_process(
         contest_data=contest_data
@@ -173,11 +186,10 @@ def contest_problem_shortname_create_view(request):
     create_data_json = json.dumps(create_information)
 
     context = {
-        "server_client_id": server_client_id,
-        "server_client_name": client_obj.name,
+        "server_user": server_user,
         "create_data_json": create_data_json,
         "selected_problem_dict": selected_problem_dict,
-        "opts": client_obj._meta,
+        "opts": server_user._meta,
         "available_apps": available_apps,
     }
 
@@ -186,9 +198,17 @@ def contest_problem_shortname_create_view(request):
 
 @transaction.atomic
 @require_http_methods(["GET", "POST"])
-def contest_information_edit_view(request, server_id, contest_id, cid, page_number):
-    client_obj = DomServerClient.objects.get(id=server_id)
-    problem_crawler = create_problem_crawler(client_obj)
+def contest_information_edit_view(request, server_user_id, contest_id, cid, page_number):
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    client_obj = server_user.server_client
+
+    server_client = DomServerClientModel(
+        host=client_obj.host,
+        username=server_user.username,
+        mask_password=server_user.mask_password,
+    )
+
+    problem_crawler = create_problem_crawler(server_client)
     available_apps = get_available_apps(request)
 
     try:
@@ -239,20 +259,19 @@ def contest_information_edit_view(request, server_id, contest_id, cid, page_numb
                     raise domserver_exceptions.ContestUpdateException("Contest Area Edit Error!!")
 
                 context = {
-                    "server_client_id": client_obj.id,
-                    "server_client_name": client_obj.name,
+                    "server_user": server_user,
                     "cid": cid,
                     "contest_update_data_json": contest_update_data_json,
                     "existing_problem_id_list": existing_problem_id_list,
                     "problem_log_objs_list": problem_log_objs_list,
-                    "opts": client_obj._meta,
+                    "opts": server_user._meta,
                     "available_apps": available_apps,
                 }
                 return render(request, "contest_edit_selected_problem.html", context)
     
     except IntegrityError as e:
         print(f"{type(e).__name__}:", e)
-        return redirect("contest_information_edit", server_id=server_id, contest_id=contest_id, cid=cid, page_number=page_number)
+        return redirect("contest_information_edit", server_user_id=server_user_id, contest_id=contest_id, cid=cid, page_number=page_number)
     
     contest_obj = get_object_or_404(DomServerContest, id=contest_id)
     if request.method == "GET":
@@ -260,13 +279,12 @@ def contest_information_edit_view(request, server_id, contest_id, cid, page_numb
 
     request.session["page_number"] = page_number
     context = {
-        "server_client_id": client_obj.id,
-        "server_client_name": client_obj.name,
+        "server_user": server_user,
         "contest_id": contest_id,
         "cid": cid,
         "form": form,
         "page_number": page_number,
-        "opts": client_obj._meta,
+        "opts": server_user._meta,
         "available_apps": available_apps,
     }
 
@@ -275,20 +293,35 @@ def contest_information_edit_view(request, server_id, contest_id, cid, page_numb
 
 @transaction.atomic
 @require_http_methods(["POST"])
-def contest_problem_shortname_edit_view(request, id, cid):
+def contest_problem_shortname_edit_view(request, server_user_id, cid):
     form_data = request.POST
-    client_obj = DomServerClient.objects.get(id=id)
-    problem_crawler = create_problem_crawler(client_obj)
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    client_obj = server_user.server_client
+    server_client = DomServerClientModel(
+        host=client_obj.host,
+        username=server_user.username,
+        mask_password=server_user.mask_password,
+    )
+
+    problem_crawler = create_problem_crawler(server_client)
 
     try:
         # Get the latest contest area information
         contest_info = contest_problem_shortname_process(request=request, form_data=form_data)
+        
+        for key, value in contest_info.items():
+            print(key, value)
+        
         contest_obj = DomServerContest.objects.get(
             server_client=client_obj, short_name=contest_info.get("contest[shortname]")
         )
-        
+
+        # Delete the problem information in the old contest area
+        problem_need_delete_id = old_problem_info_remove_process(request=request, problem_crawler=problem_crawler, cid=cid)
+
         # Update the problem log state
-        update_problem_log_state(request, "移除", client_obj, contest_obj)
+        problem_log = update_problem_log_state("移除", server_client, client_obj, contest_obj)
+        ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
 
         # Update contest information
         upload_response = problem_crawler.contest_problem_upload(
@@ -299,27 +332,34 @@ def contest_problem_shortname_edit_view(request, id, cid):
             problem_exist_valid_result = validator_problem_exist(contest_info)
             
             if problem_exist_valid_result:
-                update_problem_log_state(request, "新增", client_obj, contest_obj)
+                problem_log = update_problem_log_state("新增", server_client, client_obj, contest_obj)
 
-            check_create_problem_log_for_contest_edit(request, client_obj, contest_obj, form_data, problem_crawler, cid)
+            check_create_problem_log_for_contest_edit(request, server_client, client_obj, contest_obj, form_data, problem_crawler, cid)
             
             messages.success(request, "考區編輯成功！！")
+            ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
         else:
             messages.error(request, "考區編輯失敗！！")
             raise domserver_exceptions.ContestUpdateException("Contest Area Edit Error!!")
 
-        # Delete the problem information in the old contest area
-        old_problem_info_remove_process(request=request, problem_crawler=problem_crawler, cid=cid)
+        return redirect('admin:contest-items', obj_id=server_user.id)
 
-        return redirect('admin:contest-items', obj_id=client_obj.id)
+    except domserver_exceptions.ContestUpdateException as e:
+        if problem_log:
+            for log in problem_log:
+                if log.web_problem_id in problem_need_delete_id:
+                    log.web_problem_state = "新增"
+            ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
 
+        print(f"{type(e).__name__}:", e)
+        return redirect("admin:contest-items", obj_id=server_user.id)
     except Exception as e:
         print(f"{type(e).__name__}:", e)
-        return redirect("admin:contest-items", obj_id=client_obj.id)
+        return redirect("admin:contest-items", obj_id=server_user.id)
 
 
 @require_http_methods(["POST"])
-def contest_select_problem_edit_view(request, id, cid):
+def contest_select_problem_edit_view(request, server_user_id, cid):
 
     available_apps = get_available_apps(request)
 
@@ -327,10 +367,16 @@ def contest_select_problem_edit_view(request, id, cid):
     contest_information = json.loads(request.POST.get("contestDataJson"))
     selected_problem = json.loads(request.POST.get("selectedProblem"))
 
-    client_obj = DomServerClient.objects.get(id=id)
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    server_client = DomServerClientModel(
+        host=server_user.server_client.host,
+        username=server_user.username,
+        mask_password=server_user.mask_password,
+    )
+    # client_obj = DomServerClient.objects.get(id=id)
 
     try:
-        problem_crawler = create_problem_crawler(client_obj)
+        problem_crawler = create_problem_crawler(server_client)
 
         # Get problem information format
         problem_information = problem_crawler.problem_format_process(
@@ -359,11 +405,10 @@ def contest_select_problem_edit_view(request, id, cid):
 
         context = {
             "cid": cid,
-            "server_client_id": client_obj.id,
-            "server_client_name": client_obj.name,
+            "server_user": server_user,
             "selected_problem_dict": selected_problem,
             "create_data_json": create_data_json,
-            "opts": client_obj._meta,
+            "opts": server_user._meta,
             "available_apps": available_apps,
         }
 
@@ -375,13 +420,13 @@ def contest_select_problem_edit_view(request, id, cid):
 
 
 @transaction.atomic
-def contest_copy_view(request, id, contest_id, cid):
+def contest_copy_view(request, server_user_id, contest_id, cid):
     """
     Copy a contest problem.
 
     Args:
         request (HttpRequest): The HTTP request object.
-        id (int): The ID of the DomServerClient object.
+        server_user_id (int): The ID of the DomServerUser object.
         contest_id (int): The ID of the DomServerContest object.
         cid (str): Contest Area ID on the website.
 
@@ -391,8 +436,15 @@ def contest_copy_view(request, id, contest_id, cid):
     Raises:
         ContestCopyException: If there are errors in copying the contest area.
     """
-    client_obj = DomServerClient.objects.get(id=id)
-    problem_crawler = create_problem_crawler(client_obj)
+
+    server_user = DomServerUser.objects.get(id=server_user_id)
+    client_obj = server_user.server_client
+    server_client = DomServerClientModel(
+        host=client_obj.host,
+        username=server_user.username,
+        mask_password=server_user.mask_password,
+    )
+    problem_crawler = create_problem_crawler(server_client)
 
     try:
         # Rename the contest shortname and upload the contest
@@ -408,10 +460,10 @@ def contest_copy_view(request, id, contest_id, cid):
             contest=contest_obj,
         ).order_by("-id")
 
-        get_copy_problem_log_and_upload_process(request, problem_logs, client_obj, new_contest_obj)
+        get_copy_problem_log_and_upload_process(request, server_client, problem_logs, client_obj, new_contest_obj)
 
-        return redirect("admin:contest-items", obj_id=client_obj.id)
+        return redirect("admin:contest-items", obj_id=server_user.id)
     
     except Exception as e:
         print(f"{type(e).__name__}:", e)
-        return redirect("admin:contest-items", obj_id=client_obj.id)
+        return redirect("admin:contest-items", obj_id=server_user.id)

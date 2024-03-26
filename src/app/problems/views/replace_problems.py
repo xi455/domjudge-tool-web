@@ -27,8 +27,18 @@ def replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj):
     
     try:
         for log in problem_log_objs:
-            if log.server_client not in problem_client_data:
-                problem_crawler = create_problem_crawler(log.server_client)
+            client_obj = log.server_client
+            if client_obj not in problem_client_data:
+                from app.domservers.models.dom_server import DomServerUser
+                from utils.validator_pydantic import DomServerClientModel
+                server_user = DomServerUser.objects.get(owner=request.user, server_client=client_obj)
+                server_client = DomServerClientModel(
+                    host=server_user.server_client.host,
+                    username=server_user.username,
+                    mask_password=server_user.mask_password,
+                )
+
+                problem_crawler = create_problem_crawler(server_client)
 
                 (
                     is_success,
@@ -44,16 +54,17 @@ def replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj):
                     new_problem_obj.delete()
                     return redirect("/admin/problems/problem/")
 
-                problem_client_data[log.server_client] = {
+                problem_client_data[client_obj] = {
                     "old_pid": log.web_problem_id,
                     "pid": problems_info_dict[new_problem_obj.name],
                     "cid": list(),
+                    "server_client": server_client,
                 }
             else:
-                problem_client_data[log.server_client]["cid"].append(log.contest.cid)
+                problem_client_data[client_obj]["cid"].append(log.contest.cid)
             
             log.problem = new_problem_obj
-            log.web_problem_id = problem_client_data[log.server_client]["pid"]
+            log.web_problem_id = problem_client_data[client_obj]["pid"]
             updated_logs_obj.append(log)
 
         ProblemServerLog.objects.bulk_update(updated_logs_obj, ['problem', 'web_problem_id'])
@@ -81,8 +92,10 @@ def update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_pr
     problem_client_data = replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj)
         
     for obj, value in problem_client_data.items():
-        problem_crawler = create_problem_crawler(obj)
+        server_client = value["server_client"]
+        problem_crawler = create_problem_crawler(server_client)
 
+        print('value["cid"]:', value["cid"])
         for cid in value["cid"]:
             problem_data_info = problem_crawler.get_contest_problems_info(cid)
             problem_data_info.append({

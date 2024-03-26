@@ -32,7 +32,7 @@ class UnZipFileProblemInfo(BaseModel):
             raise ValueError(e)
         
 
-def handle_upload_required_file(file):
+def handle_upload_required_file(request, file):
     """
     Extracts information from a zip file and returns a dictionary containing the extracted data.
 
@@ -79,6 +79,7 @@ def handle_upload_required_file(file):
             return file_info_obj
 
     except Exception as e:
+        messages.error(request, "解壓縮失敗！請確認上傳檔案的格式是否正確！")
         raise problem_exceptions.ProblemUnZipUploadRequiredFileException(e)
         
     

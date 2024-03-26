@@ -48,16 +48,21 @@ class DomServerUserAdmin(DjangoObjectActions, admin.ModelAdmin):
     form = DomServerAccountForm
 
     change_actions = ("get_contest_info_view",)
-    
-    def has_module_permission(self, request):
-        return request.user.is_superuser
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return queryset
+
+        return queryset.filter(owner=request.user)
 
     def save_form(self, request, form, change):
         password_field = form.cleaned_data["password_field"]
         owner = User.objects.get(username=request.user)
 
         form.instance.mask_password = password_field
-        form.instance.owner = owner
+        # form.instance.owner = owner 實驗用，需在解除註解
 
         return super().save_form(request, form, change)
     
@@ -95,9 +100,9 @@ class DomServerUserAdmin(DjangoObjectActions, admin.ModelAdmin):
         return custom_urls + urls
 
     @action(label="取得考區資訊")
-    def get_contest_info_view(self, request, obj, obj_id=None):
+    def get_contest_info_view(self, request, obj=None, obj_id=None):
         if obj_id is not None:
-            obj = DomServerClient.objects.get(id=obj_id)
+            obj = DomServerUser.objects.get(id=obj_id)
 
         server_client = DomServerClientModel(
             host=obj.server_client.host,
@@ -155,3 +160,6 @@ class DomServerAdmin(DjangoObjectActions, admin.ModelAdmin):
             return queryset
 
         return queryset.filter(owner=request.user)
+    
+    def has_module_permission(self, request):
+        return request.user.is_superuser

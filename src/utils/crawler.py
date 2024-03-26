@@ -124,7 +124,11 @@ class ProblemCrawler:
         soup = BeautifulSoup(page.text, "html.parser")
 
         error_elements = soup.select_one(".form-error-message")
-        if error_elements and page.status_code != 200:
+        # print(page.text)
+
+        # print("error_elements:", error_elements)
+        # print("page.status_code:", page.status_code)
+        if error_elements and page.status_code in (400, 401, 403, 404, 500, 503):
             return False
         else:
             return True
@@ -558,8 +562,7 @@ class ProblemCrawler:
             self.url + TestCasePath.GET.format(id), files=form_data
         )
 
-        if page.status_code == 200:
-            return True
+        return self.misjudgment(page)
 
     def update_problem_information(self, data, files, id):
         self.session.get(self.url + ProblemPath.EDIT.format(id))

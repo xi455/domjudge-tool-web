@@ -90,13 +90,13 @@ def get_contest_all_and_page_obj(request, client_obj):
     return page_obj
 
 
-def upload_problem_info_process(queryset, server_object):
+def upload_problem_info_process(queryset, server_client):
     """
     Process the upload of problem information for a given queryset and server object.
 
     Args:
         queryset (QuerySet): The queryset containing the problems to upload information for.
-        server_object (Server): The server object representing the server to upload information to.
+        server_client (Server): The server client representing the server to upload information to.
 
     Returns:
         dict: A dictionary containing the upload information for each problem in the queryset.
@@ -109,7 +109,7 @@ def upload_problem_info_process(queryset, server_object):
                   ...
               }
     """
-    problem_crawler = create_problem_crawler(server_object)
+    problem_crawler = create_problem_crawler(server_client)
     web_problems = problem_crawler.get_problems()
 
     upload_problem_info = dict()
@@ -120,7 +120,7 @@ def upload_problem_info_process(queryset, server_object):
         for record in problem_records:
             clients_host_set.add(record.server_client.host)
 
-        if server_object.host not in clients_host_set:
+        if server_client.host not in clients_host_set:
             web_problem_state = "未上傳"
         else:
             web_problem_state = "已上傳"

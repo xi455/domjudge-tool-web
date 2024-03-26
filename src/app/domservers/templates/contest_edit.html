@@ -39,7 +39,7 @@ delete-confirmation{%endblock %}
             <div class="card-body">
                 <div id="content-main">
                     {{ form.non_field_errors }}
-                    <form action="{% url 'contest_information_edit' server_client_id contest_id cid page_number %}" class="needs-validation" novalidate method="post">
+                    <form action="{% url 'contest_information_edit' server_user.id contest_id cid page_number %}" class="needs-validation" novalidate method="post">
                         {% csrf_token %}
                         <div class="row">
                             <div class="col-12 col-sm-9">
@@ -164,10 +164,7 @@ delete-confirmation{%endblock %}
                                     class="btn {{ jazzmin_ui.button_classes.primary }} cancel-link w-100">
                                     返回
                                 </button>
-                                </div>
-                                <div class="form-group">
-                                    <a action="" class="btn {{ jazzmin_ui.button_classes.danger }} w-100">移除考區</a>
-                                </div>
+                                </div>                                
                             </div>
                         </div>
                     </form>
