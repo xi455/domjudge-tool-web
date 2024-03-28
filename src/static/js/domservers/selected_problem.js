@@ -70,9 +70,9 @@ function getSelectedProblem(){
   selectedProblemHidden.value = JSON.stringify(chooseProblem);
   contestHidden.value = contestDataJson;
   
-  console.log(selectedProblemHidden.value);
-  console.log(form);
-  console.log(contestHidden.value);
+  // console.log(selectedProblemHidden.value);
+  // console.log(form);
+  // console.log(contestHidden.value);
 
   form.submit();
 }

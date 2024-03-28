@@ -1,4 +1,5 @@
 {% extends "admin/base_site.html" %}
+{% load static %}
 {% load i18n admin_urls static jazzmin %}
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
 
@@ -48,25 +49,6 @@
     </div>
 </div>
 
-<script>
-    document.querySelector("#uploadElement").addEventListener("click", function () {
-        document.querySelector("#file").click();
-    });
 
-    document.querySelector("#file").addEventListener('change', function() {
-        let fileList = this.files;
-        let fileNames = Array.from(fileList).map(file => file.name);
-        let fileListElement = document.querySelector("#fileList");
-        fileListElement.innerHTML = '';
-        fileNames.forEach(fileName => {
-            fileListElement.innerHTML += `
-                <div class="card">
-                    <div class="card-body">
-                        ${fileName}
-                    </div>
-                </div>
-            `;
-        });
-    });
-</script>
+<script src="{% static 'js/problems/unzip_problem.js' %}"></script>
 {% endblock %}

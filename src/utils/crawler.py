@@ -124,7 +124,7 @@ class ProblemCrawler:
         soup = BeautifulSoup(page.text, "html.parser")
 
         error_elements = soup.select_one(".form-error-message")
-        # print(page.text)
+        print(page.text)
 
         # print("error_elements:", error_elements)
         # print("page.status_code:", page.status_code)
@@ -255,6 +255,9 @@ class ProblemCrawler:
             "problem_upload_multiple[contest]": contest_id,
         }
 
+        with open("/Users/hongchengxi/Documents/python_project/problem_info.txt", "w", encoding="utf-8") as f:            
+            f.write(f"{files}")
+
         problem_name_list = []
         for index in range(len(files)):
             problem_name_list.append(files[index][1][0])
@@ -272,8 +275,11 @@ class ProblemCrawler:
             return False, {}, contest_id, message
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
-        result = self.misjudgment(page)
         
+        with open("/Users/hongchengxi/Documents/python_project/page.txt", "w", encoding="utf-8") as f:
+            f.write(page.text)
+
+        result = self.misjudgment(page)
         if result:
             is_succeed = True
         else:
@@ -558,6 +564,10 @@ class ProblemCrawler:
 
     def update_testcase(self, form_data, id):
         self.session.get(self.url + TestCasePath.GET.format(id))
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Content-Type": "multipart/form-data",
+        }
         page = self.session.post(
             self.url + TestCasePath.GET.format(id), files=form_data
         )

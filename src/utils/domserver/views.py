@@ -28,7 +28,7 @@ def form_create_contest_record(request, form, client_obj, problem_crawler):
         None
     """
     try:
-        form.instance.owner = User.objects.get(username=request.user.username)
+        form.instance.owner = request.user
         form.instance.server_client = client_obj
         form.instance.cid = problem_crawler.get_contest_name_cid(
             contest_shortname=form.instance.short_name

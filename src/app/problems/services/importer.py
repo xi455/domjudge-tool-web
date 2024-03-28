@@ -2,6 +2,7 @@ import os
 import shutil
 
 from io import BytesIO, StringIO
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -69,8 +70,10 @@ def create_in_out_text(instance: Problem):
 
 
 def create_problem_zip(instance: Problem):
+    current_time = datetime.now()
+    format_time = current_time.strftime("%Y%m%d%H%M%S")
     _id = str(instance.id).replace("-", "")
-    zip_file_name = f"{instance.name}"
+    zip_file_name = f"{instance.name}-{format_time}"
     path_root = "/tmp/problems"
     folder_name = f"problem_{_id}"
     out = shutil.make_archive(

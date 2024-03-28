@@ -257,6 +257,9 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
     def update_problem_testcase(self, request, problem_obj):
         problem_log_obj_all = problem_obj.problem_log.all()
 
+        if not problem_log_obj_all:
+            return messages.error(request, "請先上傳題目！！")
+
         for problem_log_obj in problem_log_obj_all:
 
             server_user = DomServerUser.objects.get(owner=request.user, server_client=problem_log_obj.server_client)
@@ -309,6 +312,10 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         result_bool = True
         newest_problem_log = get_newest_problems_log(obj=obj)
+
+        if not newest_problem_log:
+            return messages.error(request, "請先上傳題目！！")
+
         for problem_log_obj in newest_problem_log:
             server_user = DomServerUser.objects.get(owner=request.user, server_client=problem_log_obj.server_client)
             client_obj = server_user.server_client

@@ -70,7 +70,7 @@ def filter_contest_selected_problem(request, client_obj):
     Returns:
         list: A list of ProblemServerLog objects return the filtered contest's selected problems.
     """
-    owner = User.objects.get(username=request.user.username)
+    owner = request.user
 
     if owner.is_superuser:
         problem_objs = ProblemServerLog.objects.filter(server_client=client_obj)

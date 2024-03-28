@@ -21,7 +21,6 @@ class DomServerAccountForm(forms.ModelForm):
     class Meta:
         model = DomServerUser
         fields = (
-            "owner",
             "server_client",
             "username",          
             "password_field",
@@ -29,8 +28,7 @@ class DomServerAccountForm(forms.ModelForm):
             "affiliation_id",
             "affiliation_country",
         )
-        # exclude = ("owner",)
-        # fields 需要刪除 owner 這個欄位 exclude 需要解除註解
+        exclude = ("owner",)
 
 
 class DomServerContestForm(forms.ModelForm):

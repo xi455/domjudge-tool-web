@@ -59,10 +59,10 @@ class DomServerUserAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     def save_form(self, request, form, change):
         password_field = form.cleaned_data["password_field"]
-        owner = User.objects.get(username=request.user)
+        owner = request.user
 
         form.instance.mask_password = password_field
-        # form.instance.owner = owner 實驗用，需在解除註解
+        form.instance.owner = owner
 
         return super().save_form(request, form, change)
     
