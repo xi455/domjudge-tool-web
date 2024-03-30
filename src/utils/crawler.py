@@ -12,18 +12,24 @@ from pydantic import BaseModel, validator
 
 from utils.views import get_str_to_unicode
 
-from app.problems import exceptions as problems_exceptions
+from app.problems import exceptions as problem_exceptions
 from utils import exceptions as utils_exceptions
 
 
 class TestCase(BaseModel):
     id: str
-    file_id: str
 
 
 class ServerContest(BaseModel):
     contest_name: str
     contest_id: str
+
+class WebTestCase(BaseModel):
+    deleteid: str
+    id: str
+    sample: str
+    input: str
+    output: str
 
 
 class ContestInfo(BaseModel):
@@ -109,7 +115,7 @@ class ProblemCrawler:
         if response.url == self.url + HomePath.JURY:
             return session
 
-        raise problems_exceptions.ProblemDownloaderLoginException("Login Error.")
+        raise problem_exceptions.ProblemDownloaderLoginException("Login Error.")
 
     def misjudgment(self, page):
         """
@@ -122,12 +128,8 @@ class ProblemCrawler:
             bool: True if there are no upload errors, False otherwise.
         """
         soup = BeautifulSoup(page.text, "html.parser")
-
         error_elements = soup.select_one(".form-error-message")
-        print(page.text)
 
-        # print("error_elements:", error_elements)
-        # print("page.status_code:", page.status_code)
         if error_elements and page.status_code in (400, 401, 403, 404, 500, 503):
             return False
         else:
@@ -215,8 +217,12 @@ class ProblemCrawler:
         # get domjudge all problem information return class type
         # example: {problem_name: class(id=problem_id, name=problem_name)}
 
-        page = self.session.post(self.url + ProblemPath.GET)
+        page = self.session.get(self.url + ProblemPath.GET)
         soup = BeautifulSoup(page.text, "html.parser")
+
+        result = self.misjudgment(page)
+        if not result:
+            return dict()
 
         problem_data_dict = dict()
         tr_elements = soup.select("table tr")
@@ -255,9 +261,6 @@ class ProblemCrawler:
             "problem_upload_multiple[contest]": contest_id,
         }
 
-        with open("/Users/hongchengxi/Documents/python_project/problem_info.txt", "w", encoding="utf-8") as f:            
-            f.write(f"{files}")
-
         problem_name_list = []
         for index in range(len(files)):
             problem_name_list.append(files[index][1][0])
@@ -275,20 +278,19 @@ class ProblemCrawler:
             return False, {}, contest_id, message
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
-        
-        with open("/Users/hongchengxi/Documents/python_project/page.txt", "w", encoding="utf-8") as f:
-            f.write(page.text)
 
         result = self.misjudgment(page)
         if result:
             is_succeed = True
-        else:
+        else:            
             message = "題目上傳失敗！！"
             return False, {}, contest_id, message
 
         result_problems_info_dict = dict()
         problems_dict = self.get_problems()
+
         problems_key = problems_dict.keys()
+
         for name in problem_name_list:
             if name in problems_key:
                 result_problems_info_dict[name] = problems_dict[name].id
@@ -516,60 +518,75 @@ class ProblemCrawler:
         )
 
         return self.misjudgment(page)
+    
+    def get_testcases(self, href):
+        page = self.session.get(self.url + href)
+        soup = BeautifulSoup(page.text, "html.parser")
+
+        return soup.text
 
     def get_testcases_all(self, problem_id):
         page = self.session.get(self.url + TestCasePath.GET.format(problem_id))
         soup = BeautifulSoup(page.text, "html.parser")
-        rows = soup.select("table tr")
 
-        testcases_dict = {}
+        testcases_dict = dict()
+        tr_elements = soup.select("table tr")
+        for index in range(1, len(tr_elements), 2):
+            testcase_data = dict()
+            td_elements = tr_elements[index].select("td")
 
-        for row in range(1, len(rows)):
-            href = rows[row].select("td")[0].select_one("a").get("href")
-            if "delete_testcase" in href:
-                id = href.split("/")[3]
+            for td in td_elements:
+                href = td.select_one("a")
+                if href:
+                    href = href.get("href")
+                    if "/delete_testcase" in href:
+                        id = href.split("/")[3]
+                        testcase_data["deleteid"] = id
 
-            row_id = rows[row].select(".testrank")
-            md5 = rows[row].select(".md5")
+                sample = td.select_one("input[type=checkbox]")
+                if sample:
+                    if sample.has_attr("checked"):
+                        testcase_data["sample"] = "sample"
+                    else:
+                        testcase_data["sample"] = ""
 
-            file_md5 = md5[0].text.replace("\n", "").replace(" ", "")
+                testcase_href = td.select_one("a")
+                if testcase_href:
+                    testcase_href = testcase_href.get("href")
+                    if "/fetch/" in testcase_href:
+                        testcase = self.get_testcases(testcase_href)
+                        testcase_data["input"] = testcase
 
-            if row_id:
-                file_id = row_id[0].text.replace("\n", "").replace(" ", "")
-                left_md5 = file_md5
-            else:
-                info = {"id": id, "file_id": file_id}
+                        id = testcase_href.split("/")[5]
+                        testcase_data["id"] = id
 
-                testcase = TestCase(**info)
-                file_md5 = left_md5 + file_md5
-                testcases_dict[file_md5] = testcase
+                if "class" in td.attrs:
+                    if "md5" in td.attrs["class"]:
+                        left_md5 = td.text.strip()
 
+            td_elements = tr_elements[index + 1].select("td")
+            for td in td_elements:
+                testcase_href = td.select_one("a")
+                if testcase_href:
+                    testcase_href = testcase_href.get("href")
+                    if "/fetch/" in testcase_href:
+                        testcase = self.get_testcases(testcase_href)
+                        testcase_data["output"] = testcase
+
+                if "class" in td.attrs:
+                    if "md5" in td.attrs["class"]:
+                        right_md5 = td.text.strip()
+
+            if left_md5 and right_md5:
+                md5 = left_md5 + right_md5
+                testcases_dict[md5] = WebTestCase(**testcase_data)
+        
         return testcases_dict
 
-    def get_testcase(self, problem_id, testcase_id):
-        testcases = {}
-        page = self.session.get(
-            self.url + TestCasePath.GET_INPUT.format(problem_id, testcase_id)
-        )
-        soup = BeautifulSoup(page.text, "html.parser")
-        testcases["in"] = soup.text
-
-        page = self.session.get(
-            self.url + TestCasePath.GET_OUTPUT.format(problem_id, testcase_id)
-        )
-        soup = BeautifulSoup(page.text, "html.parser")
-        testcases["out"] = soup.text
-
-        return testcases
-
-    def update_testcase(self, form_data, id):
+    def create_testcase(self, form_data, sample_data, id):
         self.session.get(self.url + TestCasePath.GET.format(id))
-        headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Content-Type": "multipart/form-data",
-        }
         page = self.session.post(
-            self.url + TestCasePath.GET.format(id), files=form_data
+            self.url + TestCasePath.GET.format(id), files=form_data, data=sample_data
         )
 
         return self.misjudgment(page)

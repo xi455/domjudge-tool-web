@@ -50,5 +50,17 @@ class ProblemReplaceException(Exception):
     pass
 
 
+class ProblemReplaceUploadException(Exception):
+    pass
+
+
 class ProblemReplaceUpdateLogException(ProblemReplaceException):
+    pass
+
+
+class ProblemTestCaseException(Exception):
+    pass
+
+
+class ProblemTestCaseUploadException(ProblemTestCaseException):
     pass

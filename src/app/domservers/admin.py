@@ -12,7 +12,7 @@ from app.domservers.forms import DomServerAccountForm
 from app.domservers.models import DomServerClient, DomServerUser, DomServerContest
 from app.domservers.views.validator import validator_demo_contest_exist
 
-from app.problems import exceptions as problems_exceptions
+from app.problems import exceptions as problem_exceptions
 
 from app.users.models import User
 
@@ -79,17 +79,17 @@ class DomServerUserAdmin(DjangoObjectActions, admin.ModelAdmin):
             problem_crawler.login()
             result = validator_demo_contest_exist(problem_crawler, obj.server_client)
             if not result:
-                raise problems_exceptions.ProblemDownloaderDemoContestNotFoundException("Demo contest not found.")
+                raise problem_exceptions.ProblemDownloaderDemoContestNotFoundException("Demo contest not found.")
             
             messages.success(request, "嘗試登入成功")
 
             super().save_model(request, obj, form, change)
-        except problems_exceptions.ProblemDownloaderLoginException as e:
+        except problem_exceptions.ProblemDownloaderLoginException as e:
             messages.error(request, "嘗試登入失敗，請檢查帳號密碼是否正確")
-            print(e)
-        except problems_exceptions.ProblemDownloaderDemoContestNotFoundException as e:
+            print(f"{type(e).__name__}:", e)
+        except problem_exceptions.ProblemDownloaderDemoContestNotFoundException as e:
             messages.error(request, "Demo 考場建置失敗，請告知維護人員")
-            print(e)
+            print(f"{type(e).__name__}:", e)
 
 
     def get_urls(self):
@@ -115,9 +115,9 @@ class DomServerUserAdmin(DjangoObjectActions, admin.ModelAdmin):
             problem_crawler.login()
             messages.success(request, "登入成功")
 
-        except problems_exceptions.ProblemDownloaderLoginException as e:
+        except problem_exceptions.ProblemDownloaderLoginException as e:
             messages.error(request, "登入失敗，請檢查帳號密碼是否正確")
-            print(e)
+            print(f"{type(e).__name__}:", e)
 
         if "page_number" in request.session:
             page_number = request.session["page_number"]

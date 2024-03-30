@@ -148,11 +148,11 @@ def create_unzip_problem_obj(request, file_info_obj):
         if "UNIQUE constraint failed" in str(e):
             messages.error(request, "題目名稱已經存在！")
         else:
-            messages.error(request, "題目創建/上傳失敗！")
+            messages.error(request, "題目創建失敗！")
         raise problem_exceptions.ProblemUnZipCreateException(e)
 
     except Exception as e:
-        messages.error(request, "題目創建/上傳失敗！")
+        messages.error(request, "題目上傳失敗！")
         raise problem_exceptions.ProblemUnZipCreateException(e)
     
 

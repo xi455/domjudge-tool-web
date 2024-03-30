@@ -66,6 +66,11 @@ def upload_zip_view(request, pk=None):
                 problem.delete() 
 
 
+        except problem_exceptions.ProblemReplaceUploadException as e:
+            print(f"{type(e).__name__}:", e)
+            messages.error(request, str(e))
+            new_problem_obj.delete()
+            return redirect("/admin/problems/problem/")
 
         except Exception as e:
             if not messages.get_messages(request):
@@ -93,7 +98,7 @@ def problem_upload_view(request):
         domserver_name = request.POST.get("domserver")
         contest_id = request.POST.get("contests")
 
-        owner_obj = get_object_or_404(User, username=request.user)
+        owner_obj = request.user
         client_obj = get_object_or_404(DomServerClient, name=domserver_name)
         server_user = DomServerUser.objects.filter(owner=request.user, server_client=client_obj).first()
         
@@ -141,9 +146,14 @@ def problem_upload_view(request):
         messages.success(request, "題目上傳成功！！")
         return redirect("/admin/problems/problem/")
     
+    except problem_exceptions.ProblemUploadException as e:
+        print(f"{type(e).__name__}:", e)
+        messages.error(request, str(e))
+        return redirect("/admin/problems/problem/")
+    
     except Exception as e:
         if not messages.get_messages(request):
-            messages.error(request, "題目上傳失敗！！")
+            messages.error(request, "題目上傳錯誤！！")
 
         print(f"{type(e).__name__}:", e)
         return redirect("/admin/problems/problem/")

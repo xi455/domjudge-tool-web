@@ -30,9 +30,19 @@ def copy_pdf(instance: Problem):
     )
 
 
-def create_problem_yaml(instance: Problem):
+def create_problem_yaml_for_problem(instance: Problem):
     _id = str(instance.id).replace("-", "")
-    data = {"name": instance.name}
+    data = {"name": f"{instance.name}"}
+    temp = BytesIO(yaml.dump(data, allow_unicode=True).encode("utf-8"))
+    file_storage.save(f"problem_{_id}/problem.yaml", temp)
+    temp.seek(0)
+
+
+def create_problem_yaml(instance: Problem):
+    current_time = datetime.now()
+    format_time = current_time.strftime("%Y-%m-%d%H:%M:%S")
+    _id = str(instance.id).replace("-", "")
+    data = {"name": f"{instance.name}-{format_time}"}
     temp = BytesIO(yaml.dump(data, allow_unicode=True).encode("utf-8"))
     file_storage.save(f"problem_{_id}/problem.yaml", temp)
     temp.seek(0)
@@ -70,10 +80,8 @@ def create_in_out_text(instance: Problem):
 
 
 def create_problem_zip(instance: Problem):
-    current_time = datetime.now()
-    format_time = current_time.strftime("%Y%m%d%H%M%S")
     _id = str(instance.id).replace("-", "")
-    zip_file_name = f"{instance.name}-{format_time}"
+    zip_file_name = f"{instance.name}"
     path_root = "/tmp/problems"
     folder_name = f"problem_{_id}"
     out = shutil.make_archive(
@@ -83,6 +91,20 @@ def create_problem_zip(instance: Problem):
     )
     path = os.path.join(path_root, out)
     return path
+
+
+def build_zip_response_for_problem(obj: Problem) -> StreamingHttpResponse:
+    remove_folder(obj)
+    copy_pdf(obj)
+    create_problem_yaml_for_problem(obj)
+    create_in_out_text(obj)
+    create_problem_time_limit(obj)
+    zip_path = create_problem_zip(obj)
+    file = File(open(zip_path, "rb"))
+    file_name = os.path.basename(zip_path)
+    response = StreamingHttpResponse(file, content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{file_name}"'
+    return response
 
 
 def build_zip_response(obj: Problem) -> StreamingHttpResponse:

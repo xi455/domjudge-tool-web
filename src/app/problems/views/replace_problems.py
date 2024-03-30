@@ -2,9 +2,12 @@ from django.db import IntegrityError
 from django.contrib import messages
 from django.shortcuts import redirect
 
-from utils.problems.views import handle_problem_upload_format
-from app.problems.models import ProblemServerLog
 from app.problems import exceptions as problem_exceptions
+from app.problems.models import ProblemServerLog
+from app.domservers.models.dom_server import DomServerUser
+
+from utils.validator_pydantic import DomServerClientModel
+from utils.problems.views import handle_problem_upload_format
 
 from utils.admins import create_problem_crawler
 
@@ -29,8 +32,7 @@ def replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj):
         for log in problem_log_objs:
             client_obj = log.server_client
             if client_obj not in problem_client_data:
-                from app.domservers.models.dom_server import DomServerUser
-                from utils.validator_pydantic import DomServerClientModel
+                
                 server_user = DomServerUser.objects.get(owner=request.user, server_client=client_obj)
                 server_client = DomServerClientModel(
                     host=server_user.server_client.host,
@@ -53,6 +55,10 @@ def replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj):
                     messages.error(request, message)
                     new_problem_obj.delete()
                     return redirect("/admin/problems/problem/")
+                
+                if not problems_info_dict:                    
+                    raise problem_exceptions.ProblemReplaceUploadException("替代失敗！請更改題目名稱再度嘗試！！")
+
 
                 problem_client_data[client_obj] = {
                     "old_pid": log.web_problem_id,
@@ -95,7 +101,6 @@ def update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_pr
         server_client = value["server_client"]
         problem_crawler = create_problem_crawler(server_client)
 
-        print('value["cid"]:', value["cid"])
         for cid in value["cid"]:
             problem_data_info = problem_crawler.get_contest_problems_info(cid)
             problem_data_info.append({
