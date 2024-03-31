@@ -67,7 +67,7 @@
                     </div>
 
                     <div class="col-12 col-sm-3 mt-auto">
-                        <form action="{% url 'problem_upload' %}" method="post" id="form">{% csrf_token %}
+                        <form action="{% url 'problems:problem_upload' %}" method="post" id="form">{% csrf_token %}
                             <input type="hidden" name="problemIdHidden">
 
                             <div class="form-group">

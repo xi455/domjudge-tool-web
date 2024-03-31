@@ -35,7 +35,7 @@ delete-confirmation{%endblock %}
 
             <div class="card-body">
                 <div id="content-main">
-                    <form action="{% url 'contest_select_problem_edit' server_user.id cid %}" method="post" id="formPost">
+                    <form action="{% url 'domservers:contest_select_problem_edit' server_user.id cid %}" method="post" id="formPost">
                         {% csrf_token %}
                         <div class="row">
                             <div class="d-flex col-12 col-sm-9">

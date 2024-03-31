@@ -90,7 +90,6 @@ def upload_zip_view(request, pk=None):
         return render(request, "upload_zip.html", context)
 
 
-@transaction.atomic
 @require_http_methods(["POST"])
 def problem_upload_view(request):
     try:
@@ -157,53 +156,6 @@ def problem_upload_view(request):
 
         print(f"{type(e).__name__}:", e)
         return redirect("/admin/problems/problem/")
-
-
-@require_http_methods(["POST"])
-def problem_contest_view(request):
-    problem_objects_id = request.POST.getlist("updown_objects_id")
-    domserver_name = request.POST.get("domserver")
-    contests_id = request.POST.get("contests")
-
-    server_client = get_object_or_404(DomServerClient, name=domserver_name)
-    problem_crawler = create_problem_crawler(server_client=server_client)
-    contest_name = problem_crawler.get_contest_name(contests_id=contests_id)
-
-    for pk in problem_objects_id:
-        problem_obj = get_object_or_404(Problem, pk=pk)
-        problem_log_all = problem_obj.problem_log.all().order_by("-id")
-
-        upload_server_log_obj_list = list()
-        for problem_log in problem_log_all:
-
-            if (
-                problem_log.server_client.name == domserver_name
-                and problem_log.web_problem_contest == contest_name
-                and problem_log.web_problem_state == "新增"
-            ):
-                is_success = problem_crawler.delete_contest_problem(
-                    contest_id=contests_id,
-                    web_problem_id=problem_log.web_problem_id,
-                )
-
-                if is_success:
-                    new_problem_log_obj = ProblemServerLog(
-                        problem=problem_log.problem,
-                        server_client=problem_log.server_client,
-                        web_problem_id=problem_log.web_problem_id,
-                        web_problem_state="移除",
-                        web_problem_contest=problem_log.web_problem_contest,
-                    )
-                    upload_server_log_obj_list.append(new_problem_log_obj)
-                    ProblemServerLog.objects.bulk_create(upload_server_log_obj_list)
-
-                    messages.success(request, "考區題目移除成功！！")
-                else:
-                    messages.error(request, "此考區並未找到該題目！！")
-                break
-
-    return redirect("/admin/problems/problem/")
-
 
 @require_http_methods(["POST"])
 def get_contests_info_and_problem_info_api(request):

@@ -31,11 +31,8 @@ delete-confirmation{%endblock %}
 
             <div class="card-body">
                 <div id="content-main">
-                    <form action="{% url 'contest_problem_create' server_user.id %}" method="post">
+                    <form action="{% url 'domservers:contest_problem_create' server_user.id %}" method="post">
                         {% csrf_token %}
-                        server_user_id:{{server_user.id}}
-                        selected_problem_dict:{{selected_problem_dict}}
-                        <input type="hidden" name="server_user_id" value="{{server_user_id}}">
                         <input type="hidden" name="contest_data_json" value="{{create_data_json}}">
                         <input type="hidden" name="shortNameHidden" id="shortNameHidden">
                         <div class="row">

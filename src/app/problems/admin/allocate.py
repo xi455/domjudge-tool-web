@@ -139,7 +139,9 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                     testcase_admin.create_not_exist_testcases(
                         problem_log_obj,
                         web_testcases_all_dict,
+                        web_testcases_retain,
                         problems_testcases_all_dict,
+                        problems_testcases_difference,
                         problem_crawler,
                     )
                 else:

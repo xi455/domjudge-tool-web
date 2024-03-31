@@ -3,16 +3,8 @@
 
 {% block object-tools-items %}
 
-{% comment %} <a href="{% add_preserved_filters add_url is_popup to_field %}" class="btn {{ jazzmin_ui.button_classes.success }} float-right">
-    <i class="fa fa-plus-circle"></i> &nbsp; {% blocktrans with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}
-</a> {% endcomment %}
-
 {{ block.super }}
-{% comment %} <form action="{% url 'problem:unzip' %}" method="POST" id="formPost" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="file" name="file" id="file" accept=".zip"> {% endcomment %}
 <a href="{% url 'problem:upload_zip' %}" class="btn {{ jazzmin_ui.button_classes.success }} float-right mr-2">
     <i class="fa fa-upload" aria-hidden="true"></i> &nbsp; 上傳 題目.zip
 </a>
-{% comment %} </form> {% endcomment %}
 {% endblock %}

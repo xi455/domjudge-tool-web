@@ -26,7 +26,6 @@ delete-confirmation{%endblock %}
         <div class="card-header with-border">
             <h4 class="card-title">
             考區列表
-            {{server_user.id}}
             </h4>            
         </div>
 
@@ -49,9 +48,9 @@ delete-confirmation{%endblock %}
                                         <td>未啟用</td>
                                     {% endif %}
                                     <td>
-                                        <a href="{% url 'contest_information_copy' server_user.id obj.id obj.cid %}"
+                                        <a href="{% url 'domservers:contest_information_copy' server_user.id obj.id obj.cid %}"
                                             class="btn btn-primary btn-sm">複製</a>
-                                        <a href="{% url 'contest_information_edit' server_user.id obj.id obj.cid page_obj.number %}"
+                                        <a href="{% url 'domservers:contest_information_edit' server_user.id obj.id obj.cid page_obj.number %}"
                                             class="btn btn-outline-primary btn-sm">編輯</a>
                                     </td>
                                 </tr>
@@ -88,7 +87,7 @@ delete-confirmation{%endblock %}
                     </div>
 
                     <div class="col-12 col-sm-3 mt-auto">
-                    <form method="get" action="{% url 'contest_create' %}">
+                    <form method="get" action="{% url 'domservers:contest_create' %}">
                         <div class="form-group">
                         <input type="hidden" name="server_user_id" value="{{server_user.id}}">
                         <button type="submit" class="btn {{ jazzmin_ui.button_classes.primary }} form-control">新增考區</button>

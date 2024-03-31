@@ -106,8 +106,8 @@ def contest_create_view(request):
     server_client = server_user.server_client
 
     context = {
-        "form": form,
         "server_user": server_user,
+        "form": form,
         "server_client_name": server_client.name,
         "opts": server_client._meta,
         "available_apps": available_apps,
@@ -271,7 +271,7 @@ def contest_information_edit_view(request, server_user_id, contest_id, cid, page
     
     except IntegrityError as e:
         print(f"{type(e).__name__}:", e)
-        return redirect("contest_information_edit", server_user_id=server_user_id, contest_id=contest_id, cid=cid, page_number=page_number)
+        return redirect("domservers:contest_information_edit", server_user=server_user.id, contest_id=contest_id, cid=cid, page_number=page_number)
     
     contest_obj = get_object_or_404(DomServerContest, id=contest_id)
     if request.method == "GET":
@@ -308,9 +308,6 @@ def contest_problem_shortname_edit_view(request, server_user_id, cid):
     try:
         # Get the latest contest area information
         contest_info = contest_problem_shortname_process(request=request, form_data=form_data)
-        
-        for key, value in contest_info.items():
-            print(key, value)
         
         contest_obj = DomServerContest.objects.get(
             server_client=client_obj, short_name=contest_info.get("contest[shortname]")
@@ -416,7 +413,7 @@ def contest_select_problem_edit_view(request, server_user_id, cid):
     
     except Exception as e:
         print(f"{type(e).__name__}:", e)
-        return redirect("contest_select_problem_edit", id=id, cid=cid)
+        return redirect("domservers:contest_select_problem_edit", server_user.id, cid)
 
 
 @transaction.atomic
@@ -426,7 +423,6 @@ def contest_copy_view(request, server_user_id, contest_id, cid):
 
     Args:
         request (HttpRequest): The HTTP request object.
-        server_user_id (int): The ID of the DomServerUser object.
         contest_id (int): The ID of the DomServerContest object.
         cid (str): Contest Area ID on the website.
 

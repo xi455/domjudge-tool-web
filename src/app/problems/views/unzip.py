@@ -139,7 +139,7 @@ def create_unzip_problem_obj(request, file_info_obj):
             name=file_info_obj.problem_title,
             description_file=pdf_file,
             time_limit=file_info_obj.time_limit,
-            owner=User.objects.get(username=request.user),
+            owner=request.user,
         )
         return problem_obj
     

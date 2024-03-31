@@ -148,7 +148,7 @@ def handle_web_add_testcases_format(problems_testcases_difference, problems_dict
 
     return problem_testcase_info_data, sample_data
 
-def create_not_exist_testcases(problem_log_obj, web_testcases_all_dict, problems_testcases_all_dict, problem_crawler):
+def create_not_exist_testcases(problem_log_obj, web_testcases_all_dict, web_testcases_retain, problems_testcases_all_dict, problems_testcases_difference, problem_crawler):
     for problem_testcase in problems_testcases_difference:
         problem_testcase_info_data, sample_data = handle_exist_testcases_format(
             web_testcases_retain,

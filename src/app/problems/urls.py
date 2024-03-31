@@ -9,4 +9,5 @@ urlpatterns = [
     path("zip/upload/", problem_views.upload_zip_view, name="upload_zip"),
     path("zip/upload/<pk>", problem_views.upload_zip_view, name="upload_zip_with_pk"),
     path("zip/check/<uuid:pk>/", problem_views.check_zip_view, name="check_zip"),
+    path("upload/", problem_views.problem_upload_view, name="problem_upload"),
 ]
