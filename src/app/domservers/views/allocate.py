@@ -1,15 +1,13 @@
 import json
 
-from django.db import transaction, IntegrityError
 from django.contrib import messages
-from django.http import JsonResponse
+from django.db import transaction, IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_http_methods
 
-from app.users.models import User
 from app.problems.models import ProblemServerLog
 from app.domservers.forms import DomServerContestForm
-from app.domservers.models import DomServerClient, DomServerUser, DomServerContest
+from app.domservers.models import DomServerUser, DomServerContest
 
 from app.domservers.views.validator import validator_problem_exist, check_create_problem_log_for_contest_edit
 from app.domservers.views.contest import filter_contest_selected_problem, create_copy_contest_record, get_copy_problem_log_and_upload_process

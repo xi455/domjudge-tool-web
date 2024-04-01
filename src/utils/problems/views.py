@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404
 
 from app.problems.models import Problem, ProblemServerLog
-from app.problems.services.importer import build_zip_response, build_zip_response_for_problem
+from app.problems.services.importer import build_zip_response_for_problem
 
 from utils import exceptions as utils_exceptions
 from app.problems import exceptions as problem_exceptions
@@ -75,6 +75,25 @@ def handle_problems_upload(request, problem_data):
     return problems_upload_info, problems_obj_dict
 
 
+def handle_upload_error_problem(problems_obj_data_dict, problem_crawler):
+    web_problems_obj = problem_crawler.get_problems()
+    local_problems_name = problems_obj_data_dict.keys()
+    exist_problems_name = list()
+
+    for name in local_problems_name:
+        if name in web_problems_obj:
+            exist_problems_name.append(name)
+        else:
+            result_name = name
+            break
+
+    web_problems_id = [web_problems_obj[name].id for name in exist_problems_name]
+    for pid in web_problems_id:
+        problem_crawler.delete_problem(pid)
+
+    return result_name
+
+
 def create_problem_log(request, problems_obj_data_dict):
     """
     Create problem logs based on the given dictionary of problem data.
@@ -89,7 +108,7 @@ def create_problem_log(request, problems_obj_data_dict):
         objs_list = list()
         for value in problems_obj_data_dict.values():
             if not value.get("web_problem_id"):
-                raise problem_exceptions.ProblemUploadException("題目上傳失敗!請重新命名題目名稱再度嘗試!")
+                raise problem_exceptions.ProblemUploadException("題目上傳失敗!!")
             
             create_problem_log_obj = ProblemServerLog(
                 owner=value.get("owner"),

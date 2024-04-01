@@ -3,7 +3,6 @@ import json
 from django.db import IntegrityError
 from django.contrib import messages
 
-from app.users.models import User
 from app.problems.models import ProblemServerLog
 from app.domservers.models.dom_server import DomServerContest
 from app.domservers import exceptions as domserver_exceptions

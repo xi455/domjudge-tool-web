@@ -1,36 +1,15 @@
 import zipfile
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.core.files.base import ContentFile
 from django.contrib import messages
 
-from app.users.models import User 
 from app.problems.models import Problem
 from app.problems.models import ProblemInOut
 
 from app.problems import exceptions as problem_exceptions
+from utils.problems import validator_pydantic as problems_validator_pydantic
 
-from pydantic import BaseModel, validator, Field
-from typing import Optional
-import base64
-
-class UnZipFileProblemInfo(BaseModel):
-    problem_title: str
-    time_limit: float
-    problem_pdf: Optional[bytes] = Field(None, description="The Unzip file problem pdf")
-    testcases_data: dict
-
-    @validator("problem_pdf")
-    def validate_pdf(cls, value):
-        try:
-            if not value.startswith(b'%PDF-'):
-                raise ValueError("Invalid PDF file")
-            
-            return value
-        
-        except Exception as e:
-            raise ValueError(e)
-        
 
 def handle_upload_required_file(request, file):
     """
@@ -75,7 +54,7 @@ def handle_upload_required_file(request, file):
                     testcase_data[filename] = file_data
 
             file_info_dict["testcases_data"] = testcase_data
-            file_info_obj = UnZipFileProblemInfo(**file_info_dict)
+            file_info_obj = problems_validator_pydantic.UnZipFileProblemInfo(**file_info_dict)
             return file_info_obj
 
     except Exception as e:

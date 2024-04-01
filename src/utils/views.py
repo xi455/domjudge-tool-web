@@ -1,6 +1,4 @@
-import json
-
-from django.contrib import admin, messages
+from django.contrib import admin
 
 
 def get_available_apps(request):

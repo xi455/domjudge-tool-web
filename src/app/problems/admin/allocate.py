@@ -1,22 +1,17 @@
-from django.contrib import admin, messages
-from django.http import HttpRequest
 from django.shortcuts import render
-from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
+from django.urls import reverse_lazy
+from django.contrib import admin, messages
 from django_object_actions import DjangoObjectActions, action
 
-from pydantic import BaseModel
-
-from app.domservers.models import DomServerClient, DomServerUser, DomServerContest
+from app.domservers.models import DomServerUser, DomServerContest
 from utils.admins import (
     create_problem_crawler,
-    get_newest_problems_log,
-    upload_problem_info_process,
 )
 from utils.views import get_available_apps
+from utils.problems.admin import get_newest_problems_log, upload_problem_info_process
 from utils.validator_pydantic import DomServerClientModel
 
-from app.problems.forms import ProblemNameForm
 from app.problems.models import Problem, ProblemInOut, ProblemServerLog
 from app.problems.admin import testcase as testcase_admin
 from app.problems import exceptions as problem_exceptions
@@ -161,7 +156,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
                 print(f"{type(e).__name__}:", e)
                 return messages.error(request, str(e))
         
-            messages.success(request, "測資更新成功！！")
+        messages.success(request, "測資更新成功！！")
         
 
     @action(label="更新題目資訊")

@@ -1,11 +1,10 @@
 from typing import Any
 
 from django.urls import path
-from django.contrib import admin, messages
-from django.db import transaction
-from django.db.models.query import QuerySet
-from django.http import HttpRequest
 from django.shortcuts import render
+from django.http import HttpRequest
+from django.contrib import admin, messages
+from django.db.models.query import QuerySet
 from django_object_actions import DjangoObjectActions, action
 
 from app.domservers.forms import DomServerAccountForm
@@ -14,10 +13,8 @@ from app.domservers.views.validator import validator_demo_contest_exist
 
 from app.problems import exceptions as problem_exceptions
 
-from app.users.models import User
-
-from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 from utils.views import get_available_apps
+from utils.admins import create_problem_crawler, get_contest_all_and_page_obj
 from utils.validator_pydantic import DomServerClientModel
 
 

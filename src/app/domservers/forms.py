@@ -1,13 +1,9 @@
 import re
 
-from datetime import datetime, timedelta
-
 from django import forms
-from django.core.validators import RegexValidator
-from pytz import UnknownTimeZoneError, timezone
 
-from app.domservers.models import DomServerUser, DomServerContest
 from utils.forms import validate_country_format
+from app.domservers.models import DomServerUser, DomServerContest
 
 
 class DomServerAccountForm(forms.ModelForm):

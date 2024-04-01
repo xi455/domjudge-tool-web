@@ -1,14 +1,10 @@
 from django.urls import path
 
 from app.domservers.views import allocate as domserver_views
-from app.problems.views.allocate import get_contests_info_and_problem_info_api
 
 app_name = "domservers"
 
 urlpatterns = [
-    path(
-        "contests-list/", get_contests_info_and_problem_info_api, name="contests_list"
-    ),
     path("contest/create/", domserver_views.contest_create_view, name="contest_create"),
     path(
         "contest-problem/shortname/create/",

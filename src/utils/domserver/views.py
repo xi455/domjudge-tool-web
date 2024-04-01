@@ -2,10 +2,8 @@ import json
 from django.db import IntegrityError
 from django.contrib import messages
 
-from app.users.models import User
 from app.problems.models import Problem
 from app.problems.models import ProblemServerLog
-from app.domservers.models.dom_server import DomServerContest
 
 from utils.admins import create_problem_crawler
 from utils.problems.views import create_problem_log
@@ -150,7 +148,6 @@ def update_problem_log_state(state, server_client, client_obj, contest_obj):
             obj.web_problem_state = "新增"
 
     return problem_log
-    # ProblemServerLog.objects.bulk_update(problem_log, ["web_problem_state"])
 
 
 def handle_problem_log(request, form_data, server_client, client_obj, contest_obj):

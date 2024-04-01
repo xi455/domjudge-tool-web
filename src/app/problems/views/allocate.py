@@ -2,21 +2,21 @@ import json
 
 from django.db import transaction
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
+from django.contrib.auth.decorators import login_required, user_passes_test
 
-from app.users.models import User
 from app.domservers.models.dom_server import DomServerClient, DomServerUser, DomServerContest
 
 from utils.views import get_available_apps
-from utils.admins import create_problem_crawler, upload_problem_info_process
+from utils.admins import create_problem_crawler
+from utils.problems.admin import upload_problem_info_process
 from utils.problems.views import create_problem_log, handle_problems_upload
 from utils.validator_pydantic import DomServerClientModel
 
+from app.problems.models import Problem
 from app.problems.forms import ServerClientForm
-from app.problems.models import Problem, ProblemServerLog
 
 from app.problems.views.unzip import handle_upload_required_file, handle_unzip_problem_obj
 from app.problems.services.importer import build_zip_response
@@ -89,7 +89,7 @@ def upload_zip_view(request, pk=None):
         }
         return render(request, "upload_zip.html", context)
 
-
+@transaction.atomic
 @require_http_methods(["POST"])
 def problem_upload_view(request):
     try:
@@ -133,7 +133,7 @@ def problem_upload_view(request):
             files=problems_upload_info, contest_id=contest_id
         )
 
-        if not is_success:
+        if not is_success:            
             messages.error(request, message)
             raise problem_exceptions.ProblemUploadException("Error to upload Problem!!")
 
@@ -147,7 +147,9 @@ def problem_upload_view(request):
     
     except problem_exceptions.ProblemUploadException as e:
         print(f"{type(e).__name__}:", e)
-        messages.error(request, str(e))
+        from utils.problems.views import handle_upload_error_problem
+        result_error_problem_name = handle_upload_error_problem(problems_obj_data_dict, problem_crawler)
+        messages.error(request, f"{e} {result_error_problem_name} 已存在!!")
         return redirect("/admin/problems/problem/")
     
     except Exception as e:

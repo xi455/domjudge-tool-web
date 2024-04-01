@@ -1,12 +1,7 @@
-from django.contrib import messages
-from utils.admins import testcase_md5
-from pydantic import BaseModel
+from utils.problems.admin import testcase_md5
+from utils.problems import validator_pydantic as problems_validator_pydantic
 from app.problems import exceptions as problem_exceptions
 
-class ProblemTestCase(BaseModel):
-    sample: bool
-    input: str
-    output: str
 
 def handle_problem_testcase_data(problem_obj):
         """
@@ -32,7 +27,7 @@ def handle_problem_testcase_data(problem_obj):
                 "output": testcase_obj.answer_content,
             }
 
-            problem_testcase = ProblemTestCase(**problem_testcase_info)
+            problem_testcase = problems_validator_pydantic.ProblemTestCase(**problem_testcase_info)
             problems_dict[problem_testcase_md5] = problem_testcase
 
         return problems_dict
@@ -149,6 +144,17 @@ def handle_web_add_testcases_format(problems_testcases_difference, problems_dict
     return problem_testcase_info_data, sample_data
 
 def create_not_exist_testcases(problem_log_obj, web_testcases_all_dict, web_testcases_retain, problems_testcases_all_dict, problems_testcases_difference, problem_crawler):
+    """
+    Creates test cases that do not exist in the problem.
+
+    Args:
+        problem_log_obj (object): The problem log object.
+        web_testcases_all_dict (dict): Dictionary containing all test cases from the web.
+        web_testcases_retain (list): A list of web test cases to retain.
+        problems_testcases_all_dict (dict): Dictionary containing all test cases from the problems.
+        problems_testcases_difference (set): Set of test cases that are different between the web and the problems.
+        problem_crawler (object): The problem crawler object.
+    """
     for problem_testcase in problems_testcases_difference:
         problem_testcase_info_data, sample_data = handle_exist_testcases_format(
             web_testcases_retain,
@@ -186,6 +192,16 @@ def create_not_exist_testcases(problem_log_obj, web_testcases_all_dict, web_test
         )
 
 def edit_exist_testcases(problem_log_obj, web_testcases_retain, web_testcases_all_dict, problems_testcases_all_dict, problem_crawler):
+    """
+    Edit existing test cases for a problem.
+
+    Args:
+        problem_log_obj (object): The problem log object.
+        web_testcases_retain (list): The list of test cases to retain.
+        web_testcases_all_dict (dict): The dictionary of all web test cases.
+        problems_testcases_all_dict (dict): The dictionary of all problem test cases.
+        problem_crawler (object): The problem crawler object.
+    """
     problem_testcase_info_data, sample_data = handle_exist_testcases_format(
         web_testcases_retain,
         web_testcases_all_dict,

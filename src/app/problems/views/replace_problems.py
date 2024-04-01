@@ -121,7 +121,7 @@ def update_dj_contest_info_for_replace_problem(request, problem_log_objs, new_pr
                 messages.error(request, f"考區 {obj.name} 題目取代失敗！！")
                 raise problem_exceptions.ProblemReplaceException("Problem replaced by Error!!")
 
-        problem_crawler.delete_problem(request, value["old_pid"])
+        problem_crawler.delete_problem(value["old_pid"])
 
     messages.success(request, f"考區題目取代成功！！")
     return redirect("/admin/problems/problem/")

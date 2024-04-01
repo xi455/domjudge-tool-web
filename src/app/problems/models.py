@@ -19,7 +19,6 @@ def validate_problem_name(value):
 
 class Problem(BaseModel):
     name = models.CharField("題目名稱", max_length=255, validators=[validate_problem_name], unique=True)
-    # short_name = models.CharField("題目代號", max_length=50, help_text="ex: p01")
     description_file = models.FileField(
         "題目說明檔",
         upload_to=problem_file_path,
@@ -33,8 +32,6 @@ class Problem(BaseModel):
         related_name="problems",
         verbose_name="擁有者",
     )
-    # is_processed = models.BooleanField("是否上傳", default=False)
-    # web_problem_id = models.CharField("網站題目ID", max_length=68, blank=True, null=True)
 
     def delete(self, using=None, keep_parents=False):
         pdf_path = self.description_file.path
@@ -102,14 +99,14 @@ class ProblemServerLog(models.Model):
         on_delete=models.CASCADE,
         related_name="problem_log",
         verbose_name="題目紀錄",
-        # editable=False,
+        editable=False,
     )
     server_client = models.ForeignKey(
         DomServerClient,
         on_delete=models.CASCADE,
         related_name="server_log",
         verbose_name="伺服器紀錄",
-        # editable=False,
+        editable=False,
     )
     contest = models.ForeignKey(
         DomServerContest,
@@ -117,7 +114,7 @@ class ProblemServerLog(models.Model):
         related_name="contest_log",
         verbose_name="考區紀錄",
         null=True,
-        # editable=False,
+        editable=False,
     )
     web_problem_id = models.CharField("網站題目ID", max_length=68)
 

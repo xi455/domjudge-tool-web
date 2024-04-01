@@ -20,7 +20,6 @@ from django.views.generic import RedirectView
 
 from app.problems.views.allocate import (
     get_contests_info_and_problem_info_api,
-    problem_upload_view,
 )
 from app.users import views as user_views
 from core.docs import DEFAULT_API_DOC_URL, SchemaView
@@ -41,6 +40,9 @@ urlpatterns = [
     path("admin/register/", user_views.register, name="register"),
     path("admin/", admin.site.urls),
     path("problem/", include("app.problems.urls", namespace="problem")),
+    path(
+        "contests-list/", get_contests_info_and_problem_info_api, name="contests_list"
+    ),
     path("domserver/", include("app.domservers.urls", namespace="domserver")),
     path("", RedirectView.as_view(pattern_name="admin:index")),
 

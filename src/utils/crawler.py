@@ -1,58 +1,13 @@
-import json
-
-from datetime import datetime
-from enum import Enum
-from typing import Optional
-
 import requests
 
+from enum import Enum
 from bs4 import BeautifulSoup
-from django.contrib import messages
-from pydantic import BaseModel, validator
-
-from utils.views import get_str_to_unicode
 
 from app.problems import exceptions as problem_exceptions
+
+from utils.views import get_str_to_unicode
 from utils import exceptions as utils_exceptions
-
-
-class TestCase(BaseModel):
-    id: str
-
-
-class ServerContest(BaseModel):
-    contest_name: str
-    contest_id: str
-
-class WebTestCase(BaseModel):
-    deleteid: str
-    id: str
-    sample: str
-    input: str
-    output: str
-
-
-class ContestInfo(BaseModel):
-    CID: Optional[str] = None
-    name: Optional[str] = None
-    shortname: Optional[str] = None
-    activate: Optional[str] = None
-    start: Optional[str] = None
-    end: Optional[str] = None
-    processballoons: Optional[str] = None
-    public: Optional[str] = None
-    teams: Optional[str] = None
-    problems: Optional[str] = None
-
-
-class ContestDetails(BaseModel):
-    contest_name: str
-    contest_info: ContestInfo
-
-
-class ProblemInfo(BaseModel):
-    id: str
-    name: str
+from utils import validator_pydantic as utils_validator_pydantic
 
 
 class HomePath(str, Enum):
@@ -127,6 +82,7 @@ class ProblemCrawler:
         Returns:
             bool: True if there are no upload errors, False otherwise.
         """
+
         soup = BeautifulSoup(page.text, "html.parser")
         error_elements = soup.select_one(".form-error-message")
 
@@ -135,32 +91,6 @@ class ProblemCrawler:
         else:
             return True
 
-    def get_contest_name(self, contests_id):
-        page = self.session.get(self.url + ConTestPath.GET)
-        soup = BeautifulSoup(page.text, "html.parser")
-
-        table_elements = soup.select(
-            "table",
-            {
-                "class": "data-table table table-sm table-striped dataTable no-footer",
-                "id": "DataTables_Table_0",
-            },
-        )
-
-        tr_elements = table_elements[-1].select("tbody tr")
-
-        for tr in tr_elements:
-            td_elements = tr.select("td")
-            web_contest_id = td_elements[0].text.strip()
-            if web_contest_id == contests_id:
-                web_contest_name = td_elements[1].text.strip()
-
-                return web_contest_name
-
-    def get_contest_all_name(self):
-        data = self.get_contest_all()
-
-        return data.keys()
 
     def get_contest_name_cid(self, contest_shortname):
         contests = self.get_contest_all()
@@ -207,7 +137,7 @@ class ProblemCrawler:
                 td = td_elements[index].text.strip()
                 contest_info_dict[thead] = td
 
-            contest_details = ContestInfo(**contest_info_dict)
+            contest_details = utils_validator_pydantic.ContestInfo(**contest_info_dict)
             contests_detail_dict[contest_shortname] = contest_details
 
         return contests_detail_dict
@@ -237,7 +167,7 @@ class ProblemCrawler:
                 "name": name,
             }
 
-            problem_obj = ProblemInfo(**problem_info)
+            problem_obj = utils_validator_pydantic.ProblemInfo(**problem_info)
             problem_data_dict[name] = problem_obj
 
         return problem_data_dict
@@ -367,35 +297,6 @@ class ProblemCrawler:
             return tr_elements_length
 
         return 0
-
-    def get_contests_list_all(self):
-        page = self.session.get(self.url + ConTestPath.GET)
-        soup = BeautifulSoup(page.text, "html.parser")
-
-        table_elements = soup.select(
-            "table",
-            {
-                "class": "data-table table table-sm table-striped dataTable no-footer",
-                "id": "DataTables_Table_0",
-            },
-        )
-        tr_elements = table_elements[-1].select("tbody tr")
-
-        server_contests_info_dict = dict()
-        for tr in tr_elements:
-            td_elements = tr.select("td")
-            web_contest_id = td_elements[0].text.strip()
-            web_contest_name = td_elements[1].text.strip()
-
-            contest_info = {
-                "contest_name": web_contest_name,
-                "contest_id": web_contest_id,
-            }
-
-            server_contest = ServerContest(**contest_info)
-            server_contests_info_dict[web_contest_name] = server_contest
-
-        return server_contests_info_dict
 
     def contest_and_problem_create(self, create_contest_information):
 
@@ -579,7 +480,7 @@ class ProblemCrawler:
 
             if left_md5 and right_md5:
                 md5 = left_md5 + right_md5
-                testcases_dict[md5] = WebTestCase(**testcase_data)
+                testcases_dict[md5] = utils_validator_pydantic.WebTestCase(**testcase_data)
         
         return testcases_dict
 
@@ -601,25 +502,17 @@ class ProblemCrawler:
         return self.misjudgment(page)
         
 
-    def delete_problem(self, request, id):
+    def delete_problem(self, id):
         page = self.session.post(self.url + ProblemPath.DELETE.format(id))
         result = self.misjudgment(page)
-
-        if result:
-            return messages.success(request, "刪除成功")
-        else:
-            return messages.error(request, "刪除失敗")
 
     def delete_contest_problem(self, contest_id, web_problem_id):
         page = self.session.post(
             self.url + ConTestPath.DELETE.format(contest_id, web_problem_id)
         )
 
-        is_success = True
-        if page.status_code == 404:
-            is_success = False
+        return self.misjudgment(page)
 
-        return is_success
 
     def delete_testcase(self, id):
         self.session.get(self.url + TestCasePath.DELETE.format(id))

@@ -1,8 +1,6 @@
-from copy import copy
-
 from app.users.models import User
 from app.problems.models import ProblemServerLog
-from app.domservers.models.dom_server import DomServerContest, DomServerClient
+from app.domservers.models.dom_server import DomServerContest
 from app.domservers.views.contest import create_problem_log_for_contest_edit
 from app.domservers.views.demo_contest_handle import demo_contest_data, upload_demo_contest
 
@@ -12,7 +10,6 @@ from utils.domserver.views import get_problem_log_web_id_list
 def validator_demo_contest_exist(problem_crawler, obj):
     contests = problem_crawler.get_contest_all()
     admin_owner = User.objects.get(username="admin")
-    # admin_server = DomServerClient.objects.filter(host=obj.host, owner=admin_owner) 
 
     demo_contest_obj = DomServerContest.objects.filter(server_client=obj, short_name="demo")
     if "demo" not in contests and not demo_contest_obj.exists():

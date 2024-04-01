@@ -1,6 +1,3 @@
-from functools import cached_property
-
-from django.core.signing import Signer
 from django.db import models
 from django_cryptography.fields import encrypt
 
@@ -56,7 +53,6 @@ class DomServerUser(BaseModel):
         models.CharField(
             "密碼",
             max_length=128,
-            # editable=False,
         )
     )
     category_id = models.BigIntegerField(
@@ -70,18 +66,6 @@ class DomServerUser(BaseModel):
         help_text="請輸入所屬關係ID",
     )
     affiliation_country = models.CharField("所屬國家", max_length=128, default="TWN")
-    
-    # @cached_property
-    # def _signer(self):
-    #     return Signer()
-
-    # @property
-    # def password(self):
-    #     return self._signer.unsign(self.mask_password)
-
-    # @password.setter
-    # def password(self, value):
-    #     self.mask_password = self._signer.sign(value)
 
     def __str__(self):
         return f"{self.owner}-{self.username}"
@@ -103,18 +87,17 @@ class DomServerContest(BaseModel):
         on_delete=models.CASCADE,
         related_name="contest_server_client",
         verbose_name="伺服器紀錄",
-        # editable=False,
+        editable=False,
     )
     cid = models.CharField(
         "考區ID",
         max_length=255,
-        # editable=False,
+        editable=False,
     )
     name = models.CharField("考區名稱", max_length=255)
     short_name = models.CharField(
         "考區簡稱",
         max_length=255,
-        # unique=True,
     )
     start_time = models.CharField("開始時間", max_length=255)
     end_time = models.CharField("記分牌結束時間", max_length=255)
