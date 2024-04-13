@@ -81,7 +81,7 @@ def create_in_out_text(instance: Problem):
 
 def create_problem_zip(instance: Problem):
     _id = str(instance.id).replace("-", "")
-    zip_file_name = f"{instance.name}"
+    zip_file_name = f"{instance.short_name}"
     path_root = "/tmp/problems"
     folder_name = f"problem_{_id}"
     out = shutil.make_archive(

@@ -24,8 +24,8 @@ def handle_problem_upload_format(request, problem_obj):
         problem_zip = b"".join(response_zip.streaming_content)
 
         upload_file_info = (
-            "problem_upload_multiple[archives][]",
-            (problem_obj.name, problem_zip, "application/zip"),
+            "problem_upload_multiple[archives][]", (f"{problem_obj.short_name}.zip", problem_zip, "application/zip"),
+            problem_obj.name,
         )
 
         return upload_file_info

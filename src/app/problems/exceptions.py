@@ -30,10 +30,6 @@ class ProblemUnZipUploadRequiredFileException(ProblemUnZipException):
     pass
 
 
-class ProblemUnZipFormatException(ProblemUnZipException):
-    pass
-
-
 class ProblemUnZipInOutFormatException(ProblemUnZipException):
     pass
 

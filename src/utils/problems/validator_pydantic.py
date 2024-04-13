@@ -7,6 +7,7 @@ class ProblemTestCase(BaseModel):
     output: str
 
 class UnZipFileProblemInfo(BaseModel):
+    file_name: str
     problem_title: str
     time_limit: float
     problem_pdf: Optional[bytes] = Field(None, description="The Unzip file problem pdf")

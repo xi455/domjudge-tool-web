@@ -75,7 +75,6 @@ def replace_logs_and_upload_problem(request, problem_log_objs, new_problem_obj):
 
         ProblemServerLog.objects.bulk_update(updated_logs_obj, ['problem', 'web_problem_id'])
 
-        messages.success(request, "題目取代成功！！")
         return problem_client_data
     
     except IntegrityError as e:

@@ -3,12 +3,14 @@ import zipfile
 from django.db import IntegrityError
 from django.core.files.base import ContentFile
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 
 from app.problems.models import Problem
 from app.problems.models import ProblemInOut
 
 from app.problems import exceptions as problem_exceptions
 from utils.problems import validator_pydantic as problems_validator_pydantic
+from utils.problems.validator import validation_zip_file_name
 
 
 def handle_upload_required_file(request, file):
@@ -29,12 +31,15 @@ def handle_upload_required_file(request, file):
         with zipfile.ZipFile(file, 'r') as zip_ref:
 
             file_info_dict = {
+                "file_name": zip_ref.filename.replace(".zip", ""),
                 "problem_title": None,
                 "time_limit": None,
                 "problem_pdf": None,
                 "testcases_data": None,
             }
 
+            validation_zip_file_name(file_info_dict["file_name"])
+            
             testcase_data = dict()
             for filename in zip_ref.namelist():
                 if filename == "problem.yaml":
@@ -56,6 +61,9 @@ def handle_upload_required_file(request, file):
             file_info_dict["testcases_data"] = testcase_data
             file_info_obj = problems_validator_pydantic.UnZipFileProblemInfo(**file_info_dict)
             return file_info_obj
+        
+    except ValidationError as e:
+        raise ValidationError(e)
 
     except Exception as e:
         messages.error(request, "解壓縮失敗！請確認上傳檔案的格式是否正確！")
@@ -116,6 +124,7 @@ def create_unzip_problem_obj(request, file_info_obj):
         pdf_file = create_problem_pdf(file_info_obj)
         problem_obj = Problem.objects.create(
             name=file_info_obj.problem_title,
+            short_name=file_info_obj.file_name,
             description_file=pdf_file,
             time_limit=file_info_obj.time_limit,
             owner=request.user,
@@ -124,7 +133,7 @@ def create_unzip_problem_obj(request, file_info_obj):
     
     
     except IntegrityError as e:
-        if "UNIQUE constraint failed" in str(e):
+        if "UNIQUE constraint failed" in str(e) or "duplicate key value violates unique constraint" in str(e):
             messages.error(request, "題目名稱已經存在！")
         else:
             messages.error(request, "題目創建失敗！")

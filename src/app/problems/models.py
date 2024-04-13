@@ -5,6 +5,7 @@ from django.db import models
 
 from app.domservers.models import DomServerClient, DomServerContest
 from utils.models import BaseModel
+from utils.problems.validator import validation_zip_file_name
 
 
 def problem_file_path(instance, filename):
@@ -18,7 +19,8 @@ def validate_problem_name(value):
 
 
 class Problem(BaseModel):
-    name = models.CharField("題目名稱", max_length=255, validators=[validate_problem_name], unique=True)
+    name = models.CharField("題目名稱", max_length=255, unique=True, validators=[validate_problem_name])
+    short_name = models.CharField("題目簡稱", max_length=50, default="p01", help_text="ex: p01", validators=[validation_zip_file_name])
     description_file = models.FileField(
         "題目說明檔",
         upload_to=problem_file_path,
@@ -99,14 +101,12 @@ class ProblemServerLog(models.Model):
         on_delete=models.CASCADE,
         related_name="problem_log",
         verbose_name="題目紀錄",
-        editable=False,
     )
     server_client = models.ForeignKey(
         DomServerClient,
         on_delete=models.CASCADE,
         related_name="server_log",
         verbose_name="伺服器紀錄",
-        editable=False,
     )
     contest = models.ForeignKey(
         DomServerContest,
@@ -114,7 +114,6 @@ class ProblemServerLog(models.Model):
         related_name="contest_log",
         verbose_name="考區紀錄",
         null=True,
-        editable=False,
     )
     web_problem_id = models.CharField("網站題目ID", max_length=68)
 

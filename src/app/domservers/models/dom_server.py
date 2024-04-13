@@ -121,8 +121,8 @@ class DomServerContest(BaseModel):
         return f"{self.server_client}-{self.short_name}"
 
     class Meta:
-        verbose_name = "DomServer Contest 考場"
-        verbose_name_plural = "DomServer Contest 考場"
+        verbose_name = "DomServer Contest 考區"
+        verbose_name_plural = "DomServer Contest 考區"
 
         constraints = [
             models.UniqueConstraint(

@@ -5,13 +5,6 @@ from app.domservers.models import DomServerContest
 from utils.crawler import ProblemCrawler
 
 
-class DomjudgeUser:
-    def __init__(self, url: str, username: str, password: str):
-        self.url = url
-        self.username = username
-        self.password = password
-
-
 def action_display(
     function=None,
     *,
@@ -56,7 +49,7 @@ def get_page_obj(request, obj_list):
 
 
 def get_contest_all_and_page_obj(request, client_obj):
-    # 獲取所有比賽信息
+    # Get all contests information.
 
     if request.user.is_superuser:
         contest_info_list = [

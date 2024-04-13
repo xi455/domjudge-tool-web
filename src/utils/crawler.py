@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 
 from app.problems import exceptions as problem_exceptions
 
-from utils.views import get_str_to_unicode
 from utils import exceptions as utils_exceptions
 from utils import validator_pydantic as utils_validator_pydantic
 
@@ -86,11 +85,13 @@ class ProblemCrawler:
         soup = BeautifulSoup(page.text, "html.parser")
         error_elements = soup.select_one(".form-error-message")
 
+        if "Error: problem.externalid:" in page.text:
+            return False
+
         if error_elements and page.status_code in (400, 401, 403, 404, 500, 503):
             return False
         else:
             return True
-
 
     def get_contest_name_cid(self, contest_shortname):
         contests = self.get_contest_all()
@@ -172,48 +173,25 @@ class ProblemCrawler:
 
         return problem_data_dict
 
-    def validate_problem_name_repeat(self, problem_name_list):
-        result = []
-        problem_dict = self.get_problems()
-        problem_name = problem_dict.keys()
-        for name in problem_name_list:
-            if name in problem_name:
-                result.append(name)
-
-        if result:
-            return False, result
-
-        return True, None
-
     def upload_problem(self, files, contest_id):
-
         data = {
             "problem_upload_multiple[contest]": contest_id,
         }
 
         problem_name_list = []
         for index in range(len(files)):
-            problem_name_list.append(files[index][1][0])
-            str_to_unicode = get_str_to_unicode(files[index][1][0])
-            files[index] = [_ for _ in files[index]]
-            files[index][1] = [_ for _ in files[index][1]]
-            files[index][1][0] = str_to_unicode
-
-        is_valid, repeat_name_list = self.validate_problem_name_repeat(
-            problem_name_list
-        )
-        if not is_valid:
-            repeat_name = ", ".join(repeat_name_list)
-            message = f"上傳失敗！！{repeat_name} 題目名稱已與伺服器內題目重名。"
-            return False, {}, contest_id, message
+            problem_name_list.append(files[index][2])
+            files[index] = files[index][:-1]
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
+        with open("/Users/hongchengxi/Documents/python_project/in.txt", "w", encoding="utf-8") as f:
+            f.write(page.text)
 
         result = self.misjudgment(page)
         if result:
             is_succeed = True
         else:            
-            message = "題目上傳失敗！！"
+            message = "題目上傳失敗！！ 題目簡稱可能已與伺服器內題目重名。"
             return False, {}, contest_id, message
 
         result_problems_info_dict = dict()
@@ -326,7 +304,6 @@ class ProblemCrawler:
         return self.misjudgment(page)
 
     def get_contest_problems_info(self, contest_id):
-
         problem_count = self.get_contest_problem_count(contest_id)
         if problem_count <= 0:
             return list()
@@ -347,7 +324,6 @@ class ProblemCrawler:
             })
         
         return problem_data
-
 
     def get_contest_or_problem_information(self, contest_id, need_content=None):
 
@@ -500,11 +476,9 @@ class ProblemCrawler:
         )
 
         return self.misjudgment(page)
-        
-
+    
     def delete_problem(self, id):
         page = self.session.post(self.url + ProblemPath.DELETE.format(id))
-        result = self.misjudgment(page)
 
     def delete_contest_problem(self, contest_id, web_problem_id):
         page = self.session.post(
@@ -512,7 +486,6 @@ class ProblemCrawler:
         )
 
         return self.misjudgment(page)
-
 
     def delete_testcase(self, id):
         self.session.get(self.url + TestCasePath.DELETE.format(id))

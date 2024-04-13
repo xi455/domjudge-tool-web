@@ -13,6 +13,9 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
+from django.conf.urls.static import static
+
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import include, path
@@ -23,6 +26,9 @@ from app.problems.views.allocate import (
 )
 from app.users import views as user_views
 from core.docs import DEFAULT_API_DOC_URL, SchemaView
+
+from django.urls import re_path
+from django.views.static import serve
 
 apipatterns = [
     path("problem/", include("app.problems.apiurls")),
@@ -46,4 +52,15 @@ urlpatterns = [
     path("domserver/", include("app.domservers.urls", namespace="domserver")),
     path("", RedirectView.as_view(pattern_name="admin:index")),
 
+    # re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
+
+urlpatterns += static(
+    settings.STATIC_URL,
+    document_root=settings.STATIC_ROOT,
+)
+urlpatterns += static(
+    settings.MEDIA_URL,
+    document_root=settings.MEDIA_ROOT,
+)
+    

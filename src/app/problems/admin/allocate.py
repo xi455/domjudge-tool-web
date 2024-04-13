@@ -67,6 +67,7 @@ class ProblemAdmin(DjangoObjectActions, admin.ModelAdmin):
             {
                 "fields": (
                     "name",
+                    "short_name",
                     "description_file",
                     "time_limit",
                 ),

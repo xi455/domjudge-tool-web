@@ -3,6 +3,7 @@ import json
 from django.db import transaction
 from django.contrib import messages
 from django.http import JsonResponse
+from django.core.validators import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -65,6 +66,10 @@ def upload_zip_view(request, pk=None):
                 
                 problem.delete() 
 
+        except ValidationError as e:
+            print(f"{type(e).__name__}:", e)
+            messages.error(request, e)
+            return redirect("/admin/problems/problem/")
 
         except problem_exceptions.ProblemReplaceUploadException as e:
             print(f"{type(e).__name__}:", e)
@@ -154,7 +159,7 @@ def problem_upload_view(request):
     
     except Exception as e:
         if not messages.get_messages(request):
-            messages.error(request, "題目上傳錯誤！！")
+            messages.error(request, "題目上傳錯誤！！嘗試更改壓縮檔名名稱")
 
         print(f"{type(e).__name__}:", e)
         return redirect("/admin/problems/problem/")

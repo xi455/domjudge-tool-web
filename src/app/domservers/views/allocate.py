@@ -83,7 +83,7 @@ def contest_create_view(request):
         except Exception as e:
             print(f"{type(e).__name__}:", e)
 
-        return redirect(f"/contest/create/?server_user_id={server_user.id}")
+        return redirect(f"/domserver/contest/create/?server_user_id={server_user.id}")
 
     if request.method == "GET":
         initial_data = {
@@ -368,7 +368,6 @@ def contest_select_problem_edit_view(request, server_user_id, cid):
         username=server_user.username,
         mask_password=server_user.mask_password,
     )
-    # client_obj = DomServerClient.objects.get(id=id)
 
     try:
         problem_crawler = create_problem_crawler(server_client)

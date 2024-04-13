@@ -85,7 +85,7 @@ class DomServerUserAdmin(DjangoObjectActions, admin.ModelAdmin):
             messages.error(request, "嘗試登入失敗，請檢查帳號密碼是否正確")
             print(f"{type(e).__name__}:", e)
         except problem_exceptions.ProblemDownloaderDemoContestNotFoundException as e:
-            messages.error(request, "Demo 考場建置失敗，請告知維護人員")
+            messages.error(request, "Demo 考區建置失敗，請告知維護人員")
             print(f"{type(e).__name__}:", e)
 
 
