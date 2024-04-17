@@ -23,6 +23,9 @@ pydantic = "^2.1.1"
 django-cryptography = "^1.1"
 django-widget-tweaks = "^1.5.0"
 django-jazzmin = "2.4.4"
+requests = "^2.31.0"
+beautifulsoup4 = "^4.12.3"
+whitenoise = "^6.6.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.5.0"
@@ -32,8 +35,7 @@ flake8 = "^5.0.4"
 flake8-commas = "^2.1.0"
 mypy = "^0.982"
 isort = "^5.10.1"
-beautifulsoup4 = "^4.12.2"
-requests = "^2.31.0"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -13,11 +13,14 @@ python3 manage.py migrate
 echo "Create admin user"
 python3 manage.py createsuperuser --noinput || true
 
+echo "Create group"
+echo "from django.contrib.auth.models import Group; Group.objects.get_or_create(name='teacher');" | python manage.py shell
+
 echo "Make log dir"
-[[ -d ./log/archived ]] || mkdir -p ./log/archived
+[ -d ./log/archived ] || mkdir -p ./log/archived
 
 echo "Run crontab"
-crond
+service cron start
 
 echo "Start uwsgi"
 uwsgi --ini uwsgi.ini

@@ -1,0 +1,39 @@
+version: '3.3'
+
+services:
+  app:
+    build: .
+    # container_name: domjudge-tool-web
+    restart: unless-stopped
+    volumes:
+      - log-volume:/app/log
+      - media-volume:/app/media
+      - assets-volume:/app/assets
+    ports:
+      - "8000:8000"
+    env_file:
+      - src/core/.env
+    networks:
+      - django-net
+
+  db:
+    image: postgres
+    container_name: domjudge-tool-web-db
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    env_file:
+      - src/core/.env
+    ports:
+      - "5432:5432"
+    networks:
+      - django-net
+
+networks:
+  django-net:
+
+volumes:
+  log-volume:
+  media-volume:
+  assets-volume:
+  postgres-data:

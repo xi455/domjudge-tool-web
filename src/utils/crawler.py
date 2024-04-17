@@ -184,8 +184,6 @@ class ProblemCrawler:
             files[index] = files[index][:-1]
 
         page = self.session.post(self.url + ProblemPath.POST, data=data, files=files)
-        with open("/Users/hongchengxi/Documents/python_project/in.txt", "w", encoding="utf-8") as f:
-            f.write(page.text)
 
         result = self.misjudgment(page)
         if result:

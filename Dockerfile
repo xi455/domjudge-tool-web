@@ -1,6 +1,29 @@
-FROM python:3.8.13-alpine
+ARG PYTHON_VERSION=3.8.13
+FROM python:${PYTHON_VERSION} as base
+
+RUN pip install poetry
+
+COPY ./pyproject.toml ./pyproject.toml
+COPY ./poetry.lock ./poetry.lock
+
+RUN poetry export --format=requirements.txt --output=requirements.txt --without-hashes \
+    && pip install -r requirements.txt \
+    && pip3 install --no-cache-dir uwsgi \
+    && rm -rf /var/lib/{apt,dpkg,cache,log}
+
+# App
+FROM python:${PYTHON_VERSION}-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libpq-dev \
+      cron \
+      -y libxml2 \
+      && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+COPY --from=base /usr/local/lib/ /usr/local/lib/
+COPY --from=base /usr/local/bin/ /usr/local/bin/
 
 VOLUME /app/log
 VOLUME /app/media
@@ -8,37 +31,16 @@ VOLUME /app/assets
 
 EXPOSE 8000
 
-ENV POETRY_VIRTUALENVS_CREATE=false
-
-COPY ./pyproject.toml .
-COPY ./poetry.lock .
-
-RUN \
-  apk add --update --no-cache --virtual build-deps \
-    build-base linux-headers libc-dev \
-    pcre-dev git openssl-dev cargo && \
-  \
-  apk add --no-cache \
-    libuuid pcre mailcap logrotate \
-    musl-dev libxslt-dev libffi-dev \
-    jpeg-dev zlib-dev postgresql-dev && \
-  \
-  pip3 install --no-cache-dir poetry && \
-  poetry install --only main && \
-  \
-  apk del build-deps && \
-  rm -rf ~/.cache
-
 COPY ./docker /docker
+COPY /docker/django-logrotate /etc/cron.d/django-logrotate
+Run crontab /etc/cron.d/django-logrotate
 
 RUN \
   mv -v /docker/entrypoint.sh /usr/local/bin/entrypoint && \
   chmod +x /usr/local/bin/entrypoint && \
   \
   mv -v /docker/django.logrotate.conf /etc/logrotate.d/django && \
-  mv -v /docker/django-logrotate.sh /etc/periodic/daily/django-logrotate && \
   chmod 644 /etc/logrotate.d/django && \
-  chmod +x /etc/periodic/daily/django-logrotate && \
   \
   mv -v /docker/wait_database.py . && \
   mv -v /docker/uwsgi.ini . && \
