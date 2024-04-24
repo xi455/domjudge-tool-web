@@ -26,7 +26,7 @@ def demo_contest_data(admin_owner, server_client):
 def upload_demo_contest(problem_crawler, admin_owner, server_client):
     demo_contest_response = demo_contest_data(admin_owner, server_client)
     create_response = problem_crawler.contest_format_process(
-            contest_data=demo_contest_response
+            contest_data=demo_contest_response.__dict__
         )
 
     result = problem_crawler.contest_and_problem_create(

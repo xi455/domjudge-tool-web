@@ -14,7 +14,7 @@ def validator_demo_contest_exist(problem_crawler, obj):
     demo_contest_obj = DomServerContest.objects.filter(server_client=obj, short_name="demo")
     if "demo" not in contests and not demo_contest_obj.exists():
         
-        result, demo_contset_response = upload_demo_contest(admin_owner, obj)
+        result, demo_contset_response = upload_demo_contest(problem_crawler, admin_owner, obj)
         
         if not result:
             return False
