@@ -1,6 +1,6 @@
 <ol class="breadcrumb float-sm-right">
     <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-tachometer-alt"></i> 首頁</a></li>
     <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst }}</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'admin:domservers_domserveruser_changelist' %}">{{ opts.verbose_name }}</a></li>
-    <li class="breadcrumb-item active"><a href="{% url 'admin:domservers_domserveruser_change' server_user.id  %}">{{ server_user.name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:domservers_domserveruser_changelist' %}">Dom Server 連線資訊</a></li>
+    <li class="breadcrumb-item active"><a href="{% url 'admin:domservers_domserveruser_change' server_user.id  %}">{{ server_user }}</a></li>
 </ol>

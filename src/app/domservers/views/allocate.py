@@ -76,7 +76,7 @@ def contest_create_view(request):
                     "available_apps": available_apps,
                 }
 
-                return render(request, "contest_creat_selected_problem.html", context)
+                return render(request, "contest_create_selected_problem.html", context)
 
         except domserver_exceptions.ContestCreateDuplicateException as e:
             print(f"{type(e).__name__}:", e)

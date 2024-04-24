@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
+<script src="{% static 'js/domservers/shortname_get_form_value.js' %}"></script>
+{% endblock %}

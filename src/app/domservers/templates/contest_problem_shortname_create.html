@@ -1,13 +1,7 @@
-{% extends "admin/change_form.html" %}
+{% extends "admin/base_site.html" %}
 {% load i18n admin_urls static jazzmin %}
 {% load static %}
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
-
-{% block extrahead %}
-{{ block.super }}
-{{ media }}
-<script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
-{% endblock %}
 
 {% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}
 delete-confirmation{%endblock %}
@@ -71,7 +65,5 @@ delete-confirmation{%endblock %}
             </div>
         </div>
     </div>
-
-    <script src="{% static 'js/domservers/shortname_get_form_value.js' %}"></script>
 
 {% endblock %}
