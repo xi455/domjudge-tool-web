@@ -1,19 +1,13 @@
 {% extends "admin/base_site.html" %}
-{% load i18n admin_urls static jazzmin %}
-{% get_jazzmin_ui_tweaks as jazzmin_ui %}
-
-{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}
-delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
 {% include 'domservers_include/_breadcrumbs.html' %}
 {% endblock %}
 
 {% block content_title %}
-編輯考區
+新增\編輯考區
 {% endblock %}
 {% block content %}
-
 <div class="col-12">
     {% if process %}
     <div class="card card-danger card-outline">
@@ -29,8 +23,13 @@ delete-confirmation{%endblock %}
             <div class="card-body">
                 <div id="content-main">
                     {{ form.non_field_errors }}
+                    {% if cid %}
                     <form action="{% url 'domservers:contest_information_edit' server_user.id contest_id cid page_number %}" class="needs-validation" novalidate method="post">
+                    {% else %}
+                        <form action="" class="needs-validation" novalidate method="post">
+                    {% endif %}
                         {% csrf_token %}
+                        <input type="hidden" name="server_user_id" value="{{server_user.id}}">
                         <div class="row">
                             <div class="col-12 col-sm-9">
                                 <div class="form-group has-validation">
@@ -163,7 +162,5 @@ delete-confirmation{%endblock %}
         </div>
     </div>
 </div>
-
-<script src="{% static 'js/utils/bootstrap_form_validation.js' %}"></script>
 
 {% endblock %}

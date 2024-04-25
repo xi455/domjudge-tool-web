@@ -1,10 +1,4 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
-{% load i18n admin_urls static jazzmin %}
-{% get_jazzmin_ui_tweaks as jazzmin_ui %}
-
-{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}
-delete-confirmation{%endblock %}
 
 {% block breadcrumbs %}
 {% include 'domservers_include/_breadcrumbs.html' %}

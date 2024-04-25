@@ -6,7 +6,6 @@ from app.domservers.views.demo_contest_handle import demo_contest_data, upload_d
 
 from utils.domserver.views import get_problem_log_web_id_list
 
-
 def validator_demo_contest_exist(problem_crawler, obj):
     contests = problem_crawler.get_contest_all()
     admin_owner = User.objects.get(username="admin")

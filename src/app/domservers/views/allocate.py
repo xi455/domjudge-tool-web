@@ -76,14 +76,14 @@ def contest_create_view(request):
                     "available_apps": available_apps,
                 }
 
-                return render(request, "contest_create_selected_problem.html", context)
+                return render(request, "contest_selected_problem.html", context)
 
         except domserver_exceptions.ContestCreateDuplicateException as e:
             print(f"{type(e).__name__}:", e)
         except Exception as e:
             print(f"{type(e).__name__}:", e)
 
-        return redirect(f"/domserver/contest/create/?server_user_id={server_user.id}")
+        return redirect(f"/domserver/contest/create/?server_user_id={server_user_id}")
 
     if request.method == "GET":
         initial_data = {
@@ -111,7 +111,7 @@ def contest_create_view(request):
         "available_apps": available_apps,
     }
 
-    return render(request, "contest_create.html", context)
+    return render(request, "contest.html", context)
 
 
 @transaction.atomic
@@ -157,8 +157,9 @@ def contest_problem_shortname_create_view(request):
     available_apps = get_available_apps(request)
     server_user_id = request.POST.get("server_user_id")
     contest_data = json.loads(request.POST.get("contestDataJson"))
-    selected_problem_dict = json.loads(request.POST.get("selectedCheckboxes"))
+    selected_problem_dict = json.loads(request.POST.get("selectedProblem"))
 
+    print("server_user_id:", server_user_id)
     server_user = DomServerUser.objects.get(id=server_user_id)
     client_obj = server_user.server_client
     server_client = DomServerClientModel(
@@ -191,7 +192,7 @@ def contest_problem_shortname_create_view(request):
         "available_apps": available_apps,
     }
 
-    return render(request, "contest_problem_shortname_create.html", context)
+    return render(request, "contest_problem_shortname.html", context)
 
 
 @transaction.atomic
@@ -259,13 +260,13 @@ def contest_information_edit_view(request, server_user_id, contest_id, cid, page
                 context = {
                     "server_user": server_user,
                     "cid": cid,
-                    "contest_update_data_json": contest_update_data_json,
+                    "contest_data_json": contest_update_data_json,
                     "existing_problem_id_list": existing_problem_id_list,
                     "problem_log_objs_list": problem_log_objs_list,
                     "opts": server_user._meta,
                     "available_apps": available_apps,
                 }
-                return render(request, "contest_edit_selected_problem.html", context)
+                return render(request, "contest_selected_problem.html", context)
     
     except IntegrityError as e:
         print(f"{type(e).__name__}:", e)
@@ -286,7 +287,7 @@ def contest_information_edit_view(request, server_user_id, contest_id, cid, page
         "available_apps": available_apps,
     }
 
-    return render(request, "contest_edit.html", context)
+    return render(request, "contest.html", context)
 
 
 @transaction.atomic
@@ -406,7 +407,7 @@ def contest_select_problem_edit_view(request, server_user_id, cid):
             "available_apps": available_apps,
         }
 
-        return render(request, "contest_problem_shortname_edit.html", context)
+        return render(request, "contest_problem_shortname.html", context)
     
     except Exception as e:
         print(f"{type(e).__name__}:", e)

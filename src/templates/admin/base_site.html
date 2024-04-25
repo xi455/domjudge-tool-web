@@ -1,10 +1,15 @@
 {% extends "admin/base.html" %}
-
 {% load static %}
+{% load i18n admin_urls static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }}
+delete-confirmation{%endblock %}
 
 {% block extrahead %}
-{{ block.super }}
-{{ media }}
 <script type="text/javascript" src="{% static 'admin/js/cancel.js' %}"></script>
-<script src="{% static 'js/domservers/shortname_get_form_value.js' %}"></script>
+{% endblock %}
+
+{% block extrajs %}
+<script src="{% static 'js/utils/bootstrap_form_validation.js' %}"></script>
 {% endblock %}
