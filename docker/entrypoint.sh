@@ -22,5 +22,6 @@ echo "Make log dir"
 echo "Run crontab"
 service cron start
 
-echo "Start uwsgi"
-uwsgi --ini uwsgi.ini
+echo "Start gunicorn"
+# uwsgi --ini uwsgi.ini
+gunicorn --bind 0.0.0.0:8000 -w 4 --pid django.pid --capture-output --log-file ./log/archived/django.log core.wsgi

@@ -52,7 +52,7 @@ urlpatterns = [
     path("domserver/", include("app.domservers.urls", namespace="domserver")),
     path("", RedirectView.as_view(pattern_name="admin:index")),
 
-    # re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
 urlpatterns += static(

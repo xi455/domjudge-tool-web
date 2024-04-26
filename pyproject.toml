@@ -26,6 +26,7 @@ django-jazzmin = "2.4.4"
 requests = "^2.31.0"
 beautifulsoup4 = "^4.12.3"
 whitenoise = "^6.6.0"
+gunicorn = "^22.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.5.0"

@@ -176,3 +176,9 @@ include(
     "components/*.py",
     f"environments/{MODE}.py",
 )
+
+if not DEBUG:
+    import logging
+    import sys
+
+    logging.basicConfig(stream=sys.stderr)  # 將所有 log 導向 stderr

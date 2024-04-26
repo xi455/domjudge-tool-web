@@ -8,7 +8,6 @@ COPY ./poetry.lock ./poetry.lock
 
 RUN poetry export --format=requirements.txt --output=requirements.txt --without-hashes \
     && pip install -r requirements.txt \
-    && pip3 install --no-cache-dir uwsgi \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
 
 # App
@@ -17,7 +16,7 @@ FROM python:${PYTHON_VERSION}-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libpq-dev \
       cron \
-      -y libxml2 \
+      libxml2 \
       && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -43,7 +42,6 @@ RUN \
   chmod 644 /etc/logrotate.d/django && \
   \
   mv -v /docker/wait_database.py . && \
-  mv -v /docker/uwsgi.ini . && \
   \
   rm -rvf /docker
 
