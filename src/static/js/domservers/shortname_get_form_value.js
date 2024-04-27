@@ -11,6 +11,16 @@ function getFormValue() {
         };
     });
 
+    // 檢查 shortname 是否重複
+    let shortnameCounts = {};
+    for (let input of inputValues) {
+        if (shortnameCounts[input.shortname]) {
+            alert(`簡稱 "${input.shortname}" 重複到！！`);
+            return;
+        }
+        shortnameCounts[input.shortname] = true;
+    }
+
     let shortNameHidden = document.querySelector("#shortNameHidden");
     shortNameHidden.value = JSON.stringify(inputValues);
 
